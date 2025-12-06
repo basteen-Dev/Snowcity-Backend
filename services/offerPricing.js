@@ -1,5 +1,3 @@
-const offersModel = require('../models/offers.model');
-
 const toNumber = (value, fallback = 0) => {
   const num = Number(value);
   return Number.isFinite(num) ? num : fallback;
@@ -17,6 +15,10 @@ async function applyOfferPricing({
   const base = toNumber(baseAmount, 0);
   const normalizedTargetId = targetId == null ? null : Number(targetId);
   const normalizedSlotId = slotId == null ? null : Number(slotId);
+  
+  // Dynamic import to avoid circular dependency
+  const offersModel = require('../models/offers.model');
+  
   if (!offersModel?.findApplicableOfferRule || !targetType || !targetId || base <= 0) {
     return { unit: base, discount: 0, discount_percent: 0, offer: null };
   }

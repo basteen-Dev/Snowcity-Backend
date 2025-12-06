@@ -3,7 +3,6 @@ const attractionSlotsModel = require('./attractionSlots.model');
 const comboSlotsModel = require('./comboSlots.model');
 const attractionService = require('../services/attractionService');
 const comboService = require('../services/comboService');
-const { applyOfferPricing } = require('../services/offerPricing');
 
 function mapOffer(row) {
   if (!row) return null;
@@ -382,6 +381,8 @@ const enrichGeneratedSlotWithPricing = async (slot, offer, targetType) => {
   const resolvedBase = basePrice || Number(slot.price) || 0;
   if (!resolvedBase) return slot;
 
+  // Dynamic import to avoid circular dependency
+  const { applyOfferPricing } = require('../services/offerPricing');
   const pricing = await applyOfferPricing({
     targetType,
     targetId: targetType === 'combo' ? slot.combo_id : slot.attraction_id,
