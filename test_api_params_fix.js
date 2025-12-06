@@ -33,11 +33,11 @@ console.log('\n🎯 EXPECTED BEHAVIOR:');
 
 console.log('\n✅ VALID API CALL:');
 console.log('URL: /admin/catalog/combo-slots?combo_id=1');
-console.log('API Call: GET http://localhost:4000/api/admin/combo-slots?combo_id=1');
+console.log('API Call: GET https://snowcity-backend-zjlj.onrender.com/api/admin/combo-slots?combo_id=1');
 console.log('Response: 200 OK with dynamic slots data');
 
 console.log('\n❌ INVALID API CALL (FIXED):');
-console.log('Before fix: GET http://localhost:4000/api/admin/combo-slots (no query params)');
+console.log('Before fix: GET https://snowcity-backend-zjlj.onrender.com/api/admin/combo-slots (no query params)');
 console.log('Response: 400 Bad Request - "combo_id is required"');
 console.log('After fix: Parameters are properly sent as query params');
 
