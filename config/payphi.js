@@ -13,10 +13,10 @@ function normalizeBaseUrl(raw, fallback) {
     .map((val) => val.trim())
     .filter(Boolean);
   const chosen = parts[0] || fallback || '';
-  return (chosen || fallback || 'http://localhost:4000').replace(/\/+$/, '');
+  return (chosen || fallback || 'https://snowcity-backend-zjlj.onrender.com').replace(/\/+$/, '');
 }
 
-const APP_URL = normalizeBaseUrl(process.env.APP_URL, 'http://localhost:4000');
+const APP_URL = normalizeBaseUrl(process.env.APP_URL, 'https://snowcity-backend-zjlj.onrender.com');
 
 let returnUrlCandidate = (process.env.PAYPHI_RETURN_URL || '').trim();
 if (!returnUrlCandidate) {
