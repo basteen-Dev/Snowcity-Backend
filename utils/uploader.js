@@ -3,7 +3,7 @@ const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs/promises');
 
-const { IMAGE_MIME_TYPES, MAX_UPLOAD_SIZE_BYTES } = require('./constants');
+const { IMAGE_MIME_TYPES, SUPPORTED_MIME_TYPES, MAX_UPLOAD_SIZE_BYTES } = require('./constants');
 const s3 = require('../services/storage/s3Service');
 const cloud = require('../services/storage/cloudinaryService');
 
@@ -12,6 +12,13 @@ const memoryStorage = multer.memoryStorage();
 function imageFilter(req, file, cb) {
   if (!IMAGE_MIME_TYPES.has(file.mimetype)) {
     return cb(new Error('Only image uploads are allowed'), false);
+  }
+  cb(null, true);
+}
+
+function mediaFilter(req, file, cb) {
+  if (!SUPPORTED_MIME_TYPES.has(file.mimetype)) {
+    return cb(new Error('Only images, videos, and PDFs are allowed'), false);
   }
   cb(null, true);
 }
@@ -28,6 +35,22 @@ function uploaderImageArray(field = 'files', maxCount = 10) {
   return multer({
     storage: memoryStorage,
     fileFilter: imageFilter,
+    limits: { fileSize: MAX_UPLOAD_SIZE_BYTES },
+  }).array(field, maxCount);
+}
+
+function uploaderMediaSingle(field = 'file') {
+  return multer({
+    storage: memoryStorage,
+    fileFilter: mediaFilter,
+    limits: { fileSize: MAX_UPLOAD_SIZE_BYTES },
+  }).single(field);
+}
+
+function uploaderMediaArray(field = 'files', maxCount = 10) {
+  return multer({
+    storage: memoryStorage,
+    fileFilter: mediaFilter,
     limits: { fileSize: MAX_UPLOAD_SIZE_BYTES },
   }).array(field, maxCount);
 }
@@ -55,6 +78,14 @@ function guessExt(mime) {
       return '.webp';
     case 'image/gif':
       return '.gif';
+    case 'video/mp4':
+      return '.mp4';
+    case 'video/webm':
+      return '.webm';
+    case 'video/ogg':
+      return '.ogg';
+    case 'application/pdf':
+      return '.pdf';
     default:
       return '.jpg';
   }
@@ -89,7 +120,9 @@ async function saveToLocal(
 ) {
   if (!file || !file.buffer) throw new Error('No file buffer');
 
-  const buf = optimize ? await processImage(file.buffer) : file.buffer;
+  // Only optimize images, not videos or PDFs
+  const isImage = IMAGE_MIME_TYPES.has(file.mimetype);
+  const buf = (optimize && isImage) ? await processImage(file.buffer) : file.buffer;
   const ext = guessExt(file.mimetype);
   const sanitizedFolder = sanitizeFolder(folder);
   const relativeDirParts = [];
@@ -120,7 +153,9 @@ async function saveToLocal(
 
 async function saveToS3(file, { folder = 'uploads', optimize = true } = {}) {
   if (!file || !file.buffer) throw new Error('No file buffer');
-  const buf = optimize ? await processImage(file.buffer) : file.buffer;
+  // Only optimize images, not videos or PDFs
+  const isImage = IMAGE_MIME_TYPES.has(file.mimetype);
+  const buf = (optimize && isImage) ? await processImage(file.buffer) : file.buffer;
   const ext = guessExt(file.mimetype);
   const key = path.posix.join(folder, datePrefix(), `${Date.now()}_${Math.random().toString(36).slice(2)}${ext}`);
 
@@ -139,7 +174,9 @@ async function saveToS3(file, { folder = 'uploads', optimize = true } = {}) {
 
 async function saveToCloudinary(file, { folder = process.env.CLOUDINARY_FOLDER || 'snowcity', optimize = true } = {}) {
   if (!file || !file.buffer) throw new Error('No file buffer');
-  const buf = optimize ? await processImage(file.buffer) : file.buffer;
+  // Only optimize images, not videos or PDFs
+  const isImage = IMAGE_MIME_TYPES.has(file.mimetype);
+  const buf = (optimize && isImage) ? await processImage(file.buffer) : file.buffer;
   const res = await cloud.uploadBuffer({ buffer: buf, folder });
   return {
     url: res.secure_url || res.url,
@@ -153,6 +190,8 @@ async function saveToCloudinary(file, { folder = process.env.CLOUDINARY_FOLDER |
 module.exports = {
   uploaderImageSingle,
   uploaderImageArray,
+  uploaderMediaSingle,
+  uploaderMediaArray,
   saveToS3,
   saveToCloudinary,
   processImage,
