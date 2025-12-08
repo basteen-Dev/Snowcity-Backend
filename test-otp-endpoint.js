@@ -5,7 +5,7 @@
 
 const http = require('http');
 
-const BASE_URL = 'https://snowcity-backend-zjlj.onrender.com';
+const BASE_URL = 'http://localhost:4000';
 
 function makeRequest(method, path, data = null) {
   return new Promise((resolve, reject) => {

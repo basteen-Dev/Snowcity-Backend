@@ -33,7 +33,7 @@ node test-otp-endpoint.js
 
 Or use curl/Postman:
 ```bash
-curl -X POST https://snowcity-backend-zjlj.onrender.com/api/auth/otp/send \
+curl -X POST http://localhost:4000/api/auth/otp/send \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
