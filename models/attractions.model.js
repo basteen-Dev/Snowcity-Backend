@@ -7,6 +7,7 @@ async function createAttraction(payload) {
     slug = null,
     description = null,
     image_url = null,
+    desktop_image_url = null,
     gallery = [],
     base_price = 0,
     price_per_hour = 0,
@@ -19,14 +20,15 @@ async function createAttraction(payload) {
 
   const { rows } = await pool.query(
     `INSERT INTO attractions
-     (title, slug, description, image_url, gallery, base_price, price_per_hour, discount_percent, active, badge, video_url, slot_capacity)
-     VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10, $11, $12)
+     (title, slug, description, image_url, desktop_image_url, gallery, base_price, price_per_hour, discount_percent, active, badge, video_url, slot_capacity)
+     VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10, $11, $12, $13)
      RETURNING *`,
     [
       title,
       slug,
       description,
       image_url,
+      desktop_image_url,
       JSON.stringify(gallery || []),
       base_price,
       price_per_hour,
@@ -55,7 +57,7 @@ async function getAttractionById(attraction_id) {
   return rows[0] || null;
 }
 
-async function listAttractions({ search = '', active = null, limit = 50, offset = 0 } = {}) {
+async function listAttractions({ search = '', active = null, limit = 50, offset = 0, attractionIds = null } = {}) {
   const where = [];
   const params = [];
   let i = 1;
@@ -68,6 +70,11 @@ async function listAttractions({ search = '', active = null, limit = 50, offset 
   if (active != null) {
     where.push(`active = $${i}`);
     params.push(Boolean(active));
+    i += 1;
+  }
+  if (Array.isArray(attractionIds) && attractionIds.length) {
+    where.push(`attraction_id = ANY($${i}::bigint[])`);
+    params.push(attractionIds);
     i += 1;
   }
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';

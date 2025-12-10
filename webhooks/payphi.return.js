@@ -98,9 +98,6 @@ module.exports = async (req, res) => {
 
     if (!order) {
       logger.warn('PayPhi return: Order not found for tranCtx', { tranCtx });
-      // Even if not found, standard practice is to redirect user to home or error page 
-      // rather than leaving them on a JSON response, but for webhook logic 'OK' is fine.
-      // For a browser redirect endpoint:
       return res.redirect(`${process.env.CLIENT_URL || ''}/payment/return?status=failed&reason=not_found`);
     }
 

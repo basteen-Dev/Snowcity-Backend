@@ -1,4 +1,5 @@
 const slotsModel = require('../../models/attractionSlots.model');
+const { buildScopeFilter } = require('../middleware/scopedAccess');
 
 function normalizeDateFields(payload) {
   const out = { ...(payload || {}) };
@@ -52,10 +53,29 @@ function to12h(hms) {
 
 exports.listSlots = async (req, res, next) => {
   try {
-    const attraction_id = req.query.attraction_id ? Number(req.query.attraction_id) : null;
+    let attraction_id = req.query.attraction_id ? Number(req.query.attraction_id) : null;
     const date = req.query.date || null;
     const start_date = req.query.start_date || null;
     const end_date = req.query.end_date || null;
+
+    // Scope: enforce attraction access
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    if (!attractionScope.includes('*')) {
+      if (attractionScope.length) {
+        // If admin requested a specific attraction, ensure it's in their scope
+        if (attraction_id && !attractionScope.includes(attraction_id)) {
+          return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
+        }
+        // If no specific attraction, default to first in scope to avoid returning all
+        if (!attraction_id) {
+          attraction_id = attractionScope[0];
+        }
+      } else {
+        // No access: return empty
+        return res.json({ data: [], meta: { count: 0 } });
+      }
+    }
 
     const data = await slotsModel.listSlots({ attraction_id, date, start_date, end_date });
     const mapped = Array.isArray(data)
@@ -76,6 +96,14 @@ exports.getSlotById = async (req, res, next) => {
     const id = Number(req.params.id);
     const row = await slotsModel.getSlotById(id);
     if (!row) return res.status(404).json({ error: 'Slot not found' });
+
+    // Scope: ensure slot's attraction is within admin's scope
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    if (attractionScope.length && !attractionScope.includes('*') && !attractionScope.includes(row.attraction_id)) {
+      return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
+    }
+
     res.json({
       ...row,
       start_time_12h: to12h(row.start_time),
@@ -115,10 +143,18 @@ exports.updateSlot = async (req, res, next) => {
     const id = Number(req.params.id);
     const payload = req.body || {};
 
-    if (payload.attraction_id || payload.start_date || payload.end_date || payload.start_time || payload.end_time) {
-      const current = await slotsModel.getSlotById(id);
-      if (!current) return res.status(404).json({ error: 'Slot not found' });
+    // Load current and scope-check
+    const current = await slotsModel.getSlotById(id);
+    if (!current) return res.status(404).json({ error: 'Slot not found' });
 
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    const targetAttractionId = payload.attraction_id != null ? Number(payload.attraction_id) : current.attraction_id;
+    if (attractionScope.length && !attractionScope.includes('*') && !attractionScope.includes(targetAttractionId)) {
+      return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
+    }
+
+    if (payload.attraction_id || payload.start_date || payload.end_date || payload.start_time || payload.end_time) {
       const overlap = await slotsModel.slotOverlapExists({
         attraction_id: payload.attraction_id ?? current.attraction_id,
         start_date: payload.start_date ?? current.start_date,
@@ -141,6 +177,16 @@ exports.updateSlot = async (req, res, next) => {
 exports.deleteSlot = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
+    // Scope check before deletion
+    const current = await slotsModel.getSlotById(id);
+    if (!current) return res.status(404).json({ error: 'Slot not found' });
+
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    if (attractionScope.length && !attractionScope.includes('*') && !attractionScope.includes(current.attraction_id)) {
+      return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
+    }
+
     const ok = await slotsModel.deleteSlot(id);
     if (!ok) return res.status(404).json({ error: 'Slot not found' });
     res.json({ deleted: true });
@@ -163,7 +209,14 @@ exports.createSlotsBulk = async (req, res, next) => {
       available = true,
     } = req.body || {};
 
+    // Scope: ensure attraction is within admin's scope
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
     const aid = Number(attraction_id);
+    if (attractionScope.length && !attractionScope.includes('*') && !attractionScope.includes(aid)) {
+      return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
+    }
+
     const dur = Number(duration_minutes);
     const cap = Number(capacity);
     if (!aid || !start_date || !end_date || !start_time || !end_time || !dur || !cap) {

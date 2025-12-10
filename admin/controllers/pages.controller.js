@@ -1,6 +1,7 @@
 // admin/controllers/pages.controller.js
 const pagesModel = require('../../models/cmsPages.model');
 const { pool } = require('../../config/db');
+const { buildScopeFilter } = require('../middleware/scopedAccess');
 
 // List pages (filters + pagination)
 exports.listPages = async (req, res, next) => {
@@ -19,6 +20,60 @@ exports.listPages = async (req, res, next) => {
     const limit = Math.min(Math.max(parseInt(req.query.limit || '20', 10), 1), 100);
     const offset = (page - 1) * limit;
 
+    // Scope: only return pages this admin can access
+    const scopes = req.user.scopes || {};
+    const pageScope = scopes.page || [];
+    if (!pageScope.includes('*')) {
+      // If no full access, enforce list filter
+      const scopedIds = pageScope.length ? pageScope : [null];
+      const where = [];
+      const params = [];
+      let i = 1;
+
+      if (active !== null) {
+        where.push(`p.active = $${i++}`);
+        params.push(active);
+      }
+      if (q) {
+        where.push(`(p.title ILIKE $${i} OR p.slug ILIKE $${i})`);
+        params.push(`%${q}%`);
+        i += 1;
+      }
+      if (scopedIds.length) {
+        where.push(`p.page_id = ANY($${i}::bigint[])`);
+        params.push(scopedIds);
+        i++;
+      } else {
+        where.push('FALSE'); // no access
+      }
+      const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+      const sql = `
+        SELECT
+          p.page_id, p.title, p.slug, p.active,
+          p.nav_group, p.nav_order,
+          p.placement, p.placement_ref_id,
+          p.created_at, p.updated_at
+        FROM cms_pages p
+        ${whereSql}
+        ORDER BY p.created_at DESC
+        LIMIT $${i} OFFSET $${i + 1}
+      `;
+      const cntSql = `
+        SELECT COUNT(*)::int AS count
+        FROM cms_pages p
+        ${whereSql}
+      `;
+
+      const [rowsRes, cntRes] = await Promise.all([
+        pool.query(sql, [...params, limit, offset]),
+        pool.query(cntSql, params),
+      ]);
+
+      return res.json({ data: rowsRes.rows, meta: { page, limit, total: cntRes.rows[0]?.count || 0 } });
+    }
+
+    // Full access: existing logic
     const where = [];
     const params = [];
     let i = 1;
@@ -64,6 +119,11 @@ exports.listPages = async (req, res, next) => {
 exports.getPageById = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
+    const scopes = req.user.scopes || {};
+    const pageScope = scopes.page || [];
+    if (pageScope.length && !pageScope.includes('*') && !pageScope.includes(id)) {
+      return res.status(403).json({ error: 'Forbidden: page not in scope' });
+    }
     const row = await pagesModel.getPageById(id);
     if (!row) return res.status(404).json({ error: 'Page not found' });
     res.json(row);
@@ -73,6 +133,12 @@ exports.getPageById = async (req, res, next) => {
 // Create page
 exports.createPage = async (req, res, next) => {
   try {
+    // Scope: only admins with full page module access can create
+    const scopes = req.user.scopes || {};
+    const pageScope = scopes.page || [];
+    if (!pageScope.includes('*')) {
+      return res.status(403).json({ error: 'Forbidden: requires full page module access' });
+    }
     const p = req.body || {};
     const payload = {
       title: p.title || '',
@@ -119,6 +185,11 @@ exports.createPage = async (req, res, next) => {
 exports.updatePage = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
+    const scopes = req.user.scopes || {};
+    const pageScope = scopes.page || [];
+    if (pageScope.length && !pageScope.includes('*') && !pageScope.includes(id)) {
+      return res.status(403).json({ error: 'Forbidden: page not in scope' });
+    }
     const p = req.body || {};
     const payload = {
       title: p.title,
@@ -150,6 +221,11 @@ exports.updatePage = async (req, res, next) => {
 exports.deletePage = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
+    const scopes = req.user.scopes || {};
+    const pageScope = scopes.page || [];
+    if (pageScope.length && !pageScope.includes('*') && !pageScope.includes(id)) {
+      return res.status(403).json({ error: 'Forbidden: page not in scope' });
+    }
     const ok = await pagesModel.deletePage(id);
     if (!ok) return res.status(404).json({ error: 'Page not found' });
     res.json({ deleted: true });

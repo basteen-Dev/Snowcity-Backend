@@ -6,7 +6,7 @@ router.use('/auth', require('./adminAuth.routes'));
 
 // Now apply authentication middleware to all subsequent routes
 const { adminAuth } = require('../middleware/adminAuth');
-const { attachScopes } = require('../middleware/scopes');
+const { attachScopes } = require('../middleware/scopedAccess');
 
 router.use(adminAuth);
 router.use(attachScopes);

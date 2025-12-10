@@ -442,7 +442,8 @@ async function computeTotals(item = {}) {
     slotId: effectiveSlotId,
     baseAmount: baseUnit,
     booking_date: item.booking_date,
-    booking_time: item.booking_time,
+    // Use explicit slot start time when available so offer time windows are matched
+    booking_time: item.slot_start_time || item.slotStartTime || item.booking_time || null,
   });
 
   const unit = pricing.unit;
@@ -631,7 +632,7 @@ const createBooking = createBookings;
 
 // -------- Payment & Status --------
 
-async function initiatePayPhiPayment({ bookingId, email, mobile }) {
+async function initiatePayPhiPayment({ bookingId, email, mobile, amount: frontendAmount }) {
   // mapping param: bookingId -> orderId
   const orderId = bookingId; 
   
@@ -644,7 +645,21 @@ async function initiatePayPhiPayment({ bookingId, email, mobile }) {
   }
   
   const merchantTxnNo = order.order_ref;
-  const amount = order.final_amount ?? Math.max(0, Number(order.total_amount || 0) - Number(order.discount_amount || 0));
+  // Calculate final amount: total_amount - discount_amount
+  const totalAmount = Number(order.total_amount || 0);
+  const discountAmount = Number(order.discount_amount || 0);
+  const amount = order.final_amount ?? Math.max(0, totalAmount - discountAmount);
+  
+  // Log for verification
+  console.log('💰 Payment Amount Calculation:', { 
+    totalAmount, 
+    discountAmount, 
+    finalAmountFromDB: order.final_amount,
+    calculatedAmount: amount,
+    frontendAmount,
+    orderId 
+  });
+  
   if (!amount || Number(amount) <= 0) {
     const e = new Error('Order total must be greater than zero to initiate payment');
     e.status = 400;

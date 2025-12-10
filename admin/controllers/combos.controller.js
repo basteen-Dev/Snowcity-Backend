@@ -1,11 +1,32 @@
 const combosModel = require('../../models/combos.model');
+const { buildScopeFilter } = require('../middleware/scopedAccess');
 
 exports.listCombos = async (req, res, next) => {
   try {
     const active = req.query.active === undefined ? null : String(req.query.active).toLowerCase() === 'true';
+    // Scope: only return combos this admin can access
+    const scopes = req.user.scopes || {};
+    const comboScope = scopes.combo || [];
+    const hasFullAccess = !comboScope.length || comboScope.includes('*');
+    
+    console.log('=== COMBOS LIST DEBUG ===');
+    console.log('User scopes:', scopes);
+    console.log('Combo scope:', comboScope);
+    console.log('Has full access:', hasFullAccess);
+    
+    if (!hasFullAccess) {
+      // If no full access, enforce list filter
+      const scopedIds = comboScope.length ? comboScope : [null]; // null yields empty
+      console.log('Using scoped IDs:', scopedIds);
+      const data = await combosModel.listCombos({ active, comboIds: scopedIds });
+      console.log('Scoped combos data length:', data?.length || 0);
+      return res.json({ data, meta: { count: data.length } });
+    }
     const data = await combosModel.listCombos({ active });
+    console.log('All combos data length:', data?.length || 0);
     res.json({ data, meta: { count: data.length } });
   } catch (err) {
+    console.error('Error in listCombos:', err);
     next(err);
   }
 };
@@ -13,6 +34,11 @@ exports.listCombos = async (req, res, next) => {
 exports.getComboById = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
+    const scopes = req.user.scopes || {};
+    const comboScope = scopes.combo || [];
+    if (comboScope.length && !comboScope.includes('*') && !comboScope.includes(id)) {
+      return res.status(403).json({ error: 'Forbidden: combo not in scope' });
+    }
     const row = await combosModel.getComboById(id);
     if (!row) return res.status(404).json({ error: 'Combo not found' });
     res.json(row);
@@ -23,6 +49,12 @@ exports.getComboById = async (req, res, next) => {
 
 exports.createCombo = async (req, res, next) => {
   try {
+    // Scope: only admins with full combo module access can create
+    const scopes = req.user.scopes || {};
+    const comboScope = scopes.combo || [];
+    if (!comboScope.includes('*')) {
+      return res.status(403).json({ error: 'Forbidden: requires full combo module access' });
+    }
     console.log('=== COMBO CREATION START ===');
     console.log('Request body:', req.body);
     
@@ -88,6 +120,11 @@ exports.createCombo = async (req, res, next) => {
 exports.updateCombo = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const scopes = req.user.scopes || {};
+    const comboScope = scopes.combo || [];
+    if (comboScope.length && !comboScope.includes('*') && !comboScope.includes(Number(id))) {
+      return res.status(403).json({ error: 'Forbidden: combo not in scope' });
+    }
     const updateData = { ...req.body };
     
     // Handle legacy format updates
@@ -121,6 +158,11 @@ exports.updateCombo = async (req, res, next) => {
 exports.deleteCombo = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
+    const scopes = req.user.scopes || {};
+    const comboScope = scopes.combo || [];
+    if (comboScope.length && !comboScope.includes('*') && !comboScope.includes(id)) {
+      return res.status(403).json({ error: 'Forbidden: combo not in scope' });
+    }
     const ok = await combosModel.deleteCombo(id);
     if (!ok) return res.status(404).json({ error: 'Combo not found' });
     res.json({ deleted: true });

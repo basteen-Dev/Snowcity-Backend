@@ -140,7 +140,7 @@ async function getPageBySlug(slug) {
   return mapPage(rows[0]);
 }
 
-async function listPages({ active = null, q = '', limit = 50, offset = 0 } = {}) {
+async function listPages({ active = null, q = '', limit = 50, offset = 0, pageIds = null } = {}) {
   const where = [];
   const params = [];
   let i = 1;
@@ -152,6 +152,11 @@ async function listPages({ active = null, q = '', limit = 50, offset = 0 } = {})
   if (q) {
     where.push(`(title ILIKE $${i} OR slug ILIKE $${i})`);
     params.push(`%${q}%`);
+    i += 1;
+  }
+  if (Array.isArray(pageIds) && pageIds.length) {
+    where.push(`page_id = ANY($${i}::bigint[])`);
+    params.push(pageIds);
     i += 1;
   }
 

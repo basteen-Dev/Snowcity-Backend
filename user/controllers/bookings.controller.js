@@ -223,13 +223,14 @@ exports.initiatePayPhiPayment = async (req, res, next) => {
     // For optimization, we let service fail if order not found, but strictly we should check user_id.
     // Skipping explicit user check DB call here for speed, service will throw if order doesn't exist.
 
-    const { email, mobile } = (req.body && typeof req.body === 'object') ? req.body : {};
+    const { email, mobile, amount } = (req.body && typeof req.body === 'object') ? req.body : {};
     if (!email || !mobile) return res.status(400).json({ error: 'email and mobile are required' });
 
     const out = await bookingService.initiatePayPhiPayment({
       bookingId: id, // Service param name is legacy, but we pass Order ID
       email,
-      mobile
+      mobile,
+      amount // Optional: pass the amount from frontend for verification
     });
     res.json(out);
   } catch (err) { next(err); }

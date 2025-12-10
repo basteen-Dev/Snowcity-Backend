@@ -1,4 +1,5 @@
 const offersModel = require('../../models/offers.model');
+const { buildScopeFilter } = require('../middleware/scopedAccess');
 
 exports.listOffers = async (req, res, next) => {
   try {
@@ -10,7 +11,15 @@ exports.listOffers = async (req, res, next) => {
     const limit = Math.min(Math.max(parseInt(req.query.limit || '20', 10), 1), 100);
     const offset = (page - 1) * limit;
 
-    const data = await offersModel.listOffers({ active, rule_type, date, q, limit, offset });
+    // Scope: only return offers whose target attractions/combos are within admin's scope
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    const comboScope = scopes.combo || [];
+    const hasFullAttractionAccess = attractionScope.includes('*');
+    const hasFullComboAccess = comboScope.includes('*');
+
+    // If scoped, the model layer should filter by target_id and target_type
+    const data = await offersModel.listOffers({ active, rule_type, date, q, limit, offset, attractionScope, comboScope, hasFullAttractionAccess, hasFullComboAccess });
     res.json({ data, meta: { page, limit, count: data.length } });
   } catch (err) {
     next(err);
@@ -22,6 +31,28 @@ exports.getOfferById = async (req, res, next) => {
     const id = Number(req.params.id);
     const row = await offersModel.getOfferById(id);
     if (!row) return res.status(404).json({ error: 'Offer not found' });
+
+    // Scope: ensure offer's targets are within admin's scopes
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    const comboScope = scopes.combo || [];
+    const hasFullAttractionAccess = attractionScope.includes('*');
+    const hasFullComboAccess = comboScope.includes('*');
+
+    // If offer has rules targeting attractions/combos, enforce scope
+    if (Array.isArray(row.rules) && row.rules.length) {
+      for (const rule of row.rules) {
+        if (!rule.applies_to_all && rule.target_id) {
+          if (rule.target_type === 'attraction' && !hasFullAttractionAccess && !attractionScope.includes(rule.target_id)) {
+            return res.status(403).json({ error: 'Forbidden: offer targets out-of-scope attraction' });
+          }
+          if (rule.target_type === 'combo' && !hasFullComboAccess && !comboScope.includes(rule.target_id)) {
+            return res.status(403).json({ error: 'Forbidden: offer targets out-of-scope combo' });
+          }
+        }
+      }
+    }
+
     res.json(row);
   } catch (err) {
     next(err);
@@ -82,12 +113,30 @@ function normalizePayload(body = {}) {
 
 exports.createOffer = async (req, res, next) => {
   try {
+    // Scope: enforce that all rule targets are within admin's scopes
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    const comboScope = scopes.combo || [];
+    const hasFullAttractionAccess = attractionScope.includes('*');
+    const hasFullComboAccess = comboScope.includes('*');
+
     const payload = normalizePayload(req.body);
     if (Array.isArray(payload.rules)) {
       payload.rules = payload.rules.map((r) => ({
         ...r,
         target_id: (r.target_id === '' || r.target_id === 'null') ? null : Number(r.target_id),
       }));
+      // Validate scopes
+      for (const rule of payload.rules) {
+        if (!rule.applies_to_all && rule.target_id) {
+          if (rule.target_type === 'attraction' && !hasFullAttractionAccess && !attractionScope.includes(rule.target_id)) {
+            return res.status(403).json({ error: 'Forbidden: offer targets out-of-scope attraction' });
+          }
+          if (rule.target_type === 'combo' && !hasFullComboAccess && !comboScope.includes(rule.target_id)) {
+            return res.status(403).json({ error: 'Forbidden: offer targets out-of-scope combo' });
+          }
+        }
+      }
       const bad = payload.rules.find((r) => !r.applies_to_all && (!Number.isInteger(r.target_id) || r.target_id <= 0));
       if (bad) return res.status(400).json({ error: 'Invalid rule: target selection is required unless applies_to_all is true' });
     }
@@ -101,12 +150,30 @@ exports.createOffer = async (req, res, next) => {
 exports.updateOffer = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
+    // Scope: enforce that all rule targets are within admin's scopes
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    const comboScope = scopes.combo || [];
+    const hasFullAttractionAccess = attractionScope.includes('*');
+    const hasFullComboAccess = comboScope.includes('*');
+
     const payload = normalizePayload(req.body);
     if (Array.isArray(payload.rules)) {
       payload.rules = payload.rules.map((r) => ({
         ...r,
         target_id: (r.target_id === '' || r.target_id === 'null') ? null : Number(r.target_id),
       }));
+      // Validate scopes
+      for (const rule of payload.rules) {
+        if (!rule.applies_to_all && rule.target_id) {
+          if (rule.target_type === 'attraction' && !hasFullAttractionAccess && !attractionScope.includes(rule.target_id)) {
+            return res.status(403).json({ error: 'Forbidden: offer targets out-of-scope attraction' });
+          }
+          if (rule.target_type === 'combo' && !hasFullComboAccess && !comboScope.includes(rule.target_id)) {
+            return res.status(403).json({ error: 'Forbidden: offer targets out-of-scope combo' });
+          }
+        }
+      }
       const bad = payload.rules.find((r) => !r.applies_to_all && (!Number.isInteger(r.target_id) || r.target_id <= 0));
       if (bad) return res.status(400).json({ error: 'Invalid rule: target selection is required unless applies_to_all is true' });
     }
@@ -121,6 +188,30 @@ exports.updateOffer = async (req, res, next) => {
 exports.deleteOffer = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
+    // Scope: ensure offer is within admin's scopes before deletion
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    const comboScope = scopes.combo || [];
+    const hasFullAttractionAccess = attractionScope.includes('*');
+    const hasFullComboAccess = comboScope.includes('*');
+
+    const existing = await offersModel.getOfferById(id);
+    if (!existing) return res.status(404).json({ error: 'Offer not found' });
+
+    // Check rule targets
+    if (Array.isArray(existing.rules) && existing.rules.length) {
+      for (const rule of existing.rules) {
+        if (!rule.applies_to_all && rule.target_id) {
+          if (rule.target_type === 'attraction' && !hasFullAttractionAccess && !attractionScope.includes(rule.target_id)) {
+            return res.status(403).json({ error: 'Forbidden: offer targets out-of-scope attraction' });
+          }
+          if (rule.target_type === 'combo' && !hasFullComboAccess && !comboScope.includes(rule.target_id)) {
+            return res.status(403).json({ error: 'Forbidden: offer targets out-of-scope combo' });
+          }
+        }
+      }
+    }
+
     const ok = await offersModel.deleteOffer(id);
     if (!ok) return res.status(404).json({ error: 'Offer not found' });
     res.json({ deleted: true });

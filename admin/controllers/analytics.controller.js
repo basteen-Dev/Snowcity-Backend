@@ -1,19 +1,23 @@
 const analyticsModel = require('../../models/analytics.model');
 const adminModel = require('../models/admin.model');
+const { buildScopeFilter } = require('../middleware/scopedAccess');
 
 // Combined overview: summary + breakdown + top attractions + trend (uses live bookings)
 exports.getOverview = async (req, res, next) => {
   try {
     const { from = null, to = null } = req.query;
-    const attraction_id = req.query.attraction_id ? Number(req.query.attraction_id) : null;
-    const data = await adminModel.getAdminOverview({ from, to, attraction_id });
+    // Apply attraction scope if not full access
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    const attractionId = attractionScope.includes('*') ? null : (attractionScope.length ? attractionScope[0] : null);
+    const data = await adminModel.getAdminOverview({ from, to, attraction_id: attractionId });
 
     // Fallback to analytics aggregate if admin overview returns nothing
     if (!data || !data.summary) {
       const [summary, topAttractions, trend] = await Promise.all([
         analyticsModel.getSummary({ from, to }),
-        adminModel.getTopAttractions({ from, to, limit: 5, attraction_id }),
-        adminModel.getSalesTrend({ from, to, granularity: 'day', attraction_id }),
+        adminModel.getTopAttractions({ from, to, limit: 5, attraction_id: attractionId }),
+        adminModel.getSalesTrend({ from, to, granularity: 'day', attraction_id: attractionId }),
       ]);
       return res.json({ summary, topAttractions, trend, statusBreakdown: [] });
     }
@@ -27,9 +31,12 @@ exports.getOverview = async (req, res, next) => {
 // Raw analytics series per attraction/date window
 exports.getAnalytics = async (req, res, next) => {
   try {
-    const attraction_id = req.query.attraction_id ? Number(req.query.attraction_id) : null;
+    // Apply attraction scope
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    const attractionId = attractionScope.includes('*') ? null : (attractionScope.length ? attractionScope[0] : null);
     const { from = null, to = null } = req.query;
-    const data = await analyticsModel.getAnalytics({ attraction_id, from, to });
+    const data = await analyticsModel.getAnalytics({ attraction_id: attractionId, from, to });
     res.json({ data, meta: { count: data.length } });
   } catch (err) {
     next(err);
@@ -40,7 +47,11 @@ exports.getAnalytics = async (req, res, next) => {
 exports.getTrend = async (req, res, next) => {
   try {
     const { from = null, to = null, granularity = 'day' } = req.query;
-    const data = await adminModel.getSalesTrend({ from, to, granularity });
+    // Apply attraction scope
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    const attractionId = attractionScope.includes('*') ? null : (attractionScope.length ? attractionScope[0] : null);
+    const data = await adminModel.getSalesTrend({ from, to, granularity, attraction_id: attractionId });
     res.json(data);
   } catch (err) {
     next(err);
@@ -52,7 +63,11 @@ exports.getTopAttractions = async (req, res, next) => {
   try {
     const { from = null, to = null } = req.query;
     const limit = Math.min(parseInt(req.query.limit || '10', 10), 50);
-    const data = await adminModel.getTopAttractions({ from, to, limit });
+    // Apply attraction scope
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    const attractionId = attractionScope.includes('*') ? null : (attractionScope.length ? attractionScope[0] : null);
+    const data = await adminModel.getTopAttractions({ from, to, limit, attraction_id: attractionId });
     res.json(data);
   } catch (err) {
     next(err);

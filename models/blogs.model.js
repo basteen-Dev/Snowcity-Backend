@@ -81,7 +81,7 @@ async function getBlogBySlug(slug) {
   return mapBlog(rows[0]);
 }
 
-async function listBlogs({ active = null, q = '', limit = 50, offset = 0 } = {}) {
+async function listBlogs({ active = null, q = '', limit = 50, offset = 0, blogIds = null } = {}) {
   const where = [];
   const params = [];
   let i = 1;
@@ -93,6 +93,11 @@ async function listBlogs({ active = null, q = '', limit = 50, offset = 0 } = {})
   if (q) {
     where.push(`(title ILIKE $${i} OR slug ILIKE $${i} OR author ILIKE $${i})`);
     params.push(`%${q}%`);
+    i += 1;
+  }
+  if (Array.isArray(blogIds) && blogIds.length) {
+    where.push(`blog_id = ANY($${i}::bigint[])`);
+    params.push(blogIds);
     i += 1;
   }
 

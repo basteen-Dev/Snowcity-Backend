@@ -6,22 +6,16 @@ const payphiService = require('../../services/payphiService');
 const { createApiLog } = require('../../models/apiLogs.model');
 const ticketService = require('../../services/ticketService');
 const ticketEmailService = require('../../services/ticketEmailService');
+const { buildScopeFilter } = require('../middleware/scopedAccess');
 
 // Helpers
-function isRoot() {
-  // Permissions have been relaxed: treat every admin as having full access
-  return true;
-}
-function allowedAttractions() {
-  return [];
-}
 const toNumber = (val) => {
   const num = Number(val);
   return Number.isFinite(num) ? num : null;
 };
 const sanitizeDate = (val) => (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val) ? val : null);
 
-async function listBookings(req, res, next) {
+exports.listBookings = async function listBookings(req, res, next) {
   try {
     const {
       search = '',
@@ -54,12 +48,18 @@ async function listBookings(req, res, next) {
     const dateFrom = sanitizeDate(date_from || start_date);
     const dateTo = sanitizeDate(date_to || end_date);
 
-    // Scoping
-    const root = isRoot(req);
-    const scoped = allowedAttractions(req);
-    if (!root && attractionId && Array.isArray(scoped) && scoped.length > 0 && !scoped.includes(attractionId)) {
-      // Optional: return empty; or 403 to be explicit
+    // Scoping using admin_access
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    const comboScope = scopes.combo || [];
+
+    // If specific attraction filter requested, enforce scope
+    if (attractionId && attractionScope.length && !attractionScope.includes('*') && !attractionScope.includes(attractionId)) {
       return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
+    }
+    // If specific combo filter requested, enforce scope
+    if (comboId && comboScope.length && !comboScope.includes('*') && !comboScope.includes(comboId)) {
+      return res.status(403).json({ error: 'Forbidden: combo not in scope' });
     }
 
     const p = Math.max(parseInt(page, 10) || 1, 1);
@@ -98,11 +98,16 @@ async function listBookings(req, res, next) {
     if (slotStartTimeFilter) { where.push(`b.slot_start_time = $${i}`); params.push(slotStartTimeFilter); i++; }
     if (slotEndTimeFilter) { where.push(`b.slot_end_time = $${i}`); params.push(slotEndTimeFilter); i++; }
 
-    // Apply scope for non-root
-    if (!root && Array.isArray(scoped) && scoped.length > 0) {
-      where.push(`b.attraction_id = ANY($${i}::bigint[])`);
-      params.push(scoped);
-      i++;
+    // Apply scope for non-full-access admins
+    if (!attractionScope.includes('*')) {
+      if (attractionScope.length) {
+        where.push(`b.attraction_id = ANY($${i}::bigint[])`);
+        params.push(attractionScope);
+        i++;
+      } else {
+        // No attraction access: force empty result
+        where.push('FALSE');
+      }
     }
 
     const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
@@ -156,9 +161,12 @@ async function listBookings(req, res, next) {
   }
 }
 
-async function getBookingById(req, res, next) {
+exports.getBookingById = async function getBookingById(req, res, next) {
   try {
     const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'Invalid booking ID' });
+    }
     const comboTitleExpr = `COALESCE(NULLIF(CONCAT_WS(' + ', NULLIF(a1.title, ''), NULLIF(a2.title, '')), ''), CONCAT('Combo #', c.combo_id::text))`;
     const itemTitleExpr = `CASE WHEN b.item_type = 'Combo' THEN ${comboTitleExpr} ELSE a.title END`;
     const detailSql = `
@@ -188,11 +196,11 @@ async function getBookingById(req, res, next) {
     const row = rows[0];
     if (!row) return res.status(404).json({ error: 'Booking not found' });
 
-    if (!isRoot(req)) {
-      const scoped = allowedAttractions(req);
-      if (row.attraction_id && !scoped.includes(Number(row.attraction_id))) {
-        return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
-      }
+    // Scope check
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    if (row.attraction_id && attractionScope.length && !attractionScope.includes('*') && !attractionScope.includes(Number(row.attraction_id))) {
+      return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
     }
 
     res.json(row);
@@ -201,7 +209,7 @@ async function getBookingById(req, res, next) {
   }
 }
 
-async function createManualBooking(req, res, next) {
+exports.createManualBooking = async function createManualBooking(req, res, next) {
   try {
     const {
       user_id = null,
@@ -216,11 +224,10 @@ async function createManualBooking(req, res, next) {
     } = req.body || {};
 
     // Scope check
-    if (!isRoot(req)) {
-      const scoped = allowedAttractions(req);
-      if (attraction_id && !scoped.includes(Number(attraction_id))) {
-        return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
-      }
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    if (attraction_id && attractionScope.length && !attractionScope.includes('*') && !attractionScope.includes(Number(attraction_id))) {
+      return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
     }
 
     const booking = await bookingService.createBooking({
@@ -253,7 +260,7 @@ async function createManualBooking(req, res, next) {
   }
 }
 
-async function updateBooking(req, res, next) {
+exports.updateBooking = async function updateBooking(req, res, next) {
   try {
     const id = Number(req.params.id);
 
@@ -261,12 +268,11 @@ async function updateBooking(req, res, next) {
     const current = await bookingsModel.getBookingById(id);
     if (!current) return res.status(404).json({ error: 'Booking not found' });
 
-    if (!isRoot(req)) {
-      const scoped = allowedAttractions(req);
-      const targetAttractionId = req.body?.attraction_id != null ? Number(req.body.attraction_id) : current.attraction_id;
-      if (targetAttractionId && !scoped.includes(Number(targetAttractionId))) {
-        return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
-      }
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    const targetAttractionId = req.body?.attraction_id != null ? Number(req.body.attraction_id) : current.attraction_id;
+    if (targetAttractionId && attractionScope.length && !attractionScope.includes('*') && !attractionScope.includes(Number(targetAttractionId))) {
+      return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
     }
 
     const allowed = [
@@ -317,17 +323,17 @@ async function updateBooking(req, res, next) {
   }
 }
 
-async function resendTicket(req, res, next) {
+exports.resendTicket = async function resendTicket(req, res, next) {
   try {
     const id = Number(req.params.id);
     const booking = await bookingsModel.getBookingById(id);
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
 
-    if (!isRoot(req)) {
-      const scoped = allowedAttractions(req);
-      if (booking.attraction_id && !scoped.includes(Number(booking.attraction_id))) {
-        return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
-      }
+    // Scope check
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    if (booking.attraction_id && attractionScope.length && !attractionScope.includes('*') && !attractionScope.includes(Number(booking.attraction_id))) {
+      return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
     }
 
     if (!booking.user_id) {
@@ -349,18 +355,18 @@ async function resendTicket(req, res, next) {
   }
 }
 
-async function cancelBooking(req, res, next) {
+exports.cancelBooking = async function cancelBooking(req, res, next) {
   try {
     const id = Number(req.params.id);
 
     // Scope check
     const row = await bookingsModel.getBookingById(id);
     if (!row) return res.status(404).json({ error: 'Booking not found' });
-    if (!isRoot(req)) {
-      const scoped = allowedAttractions(req);
-      if (row.attraction_id && !scoped.includes(Number(row.attraction_id))) {
-        return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
-      }
+    // Scope check
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    if (row.attraction_id && attractionScope.length && !attractionScope.includes('*') && !attractionScope.includes(Number(row.attraction_id))) {
+      return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
     }
 
     const updated = await bookingService.cancelBooking(id);
@@ -371,18 +377,18 @@ async function cancelBooking(req, res, next) {
   }
 }
 
-async function deleteBooking(req, res, next) {
+exports.deleteBooking = async function deleteBooking(req, res, next) {
   try {
     const id = Number(req.params.id);
 
     // Scope check
     const row = await bookingsModel.getBookingById(id);
     if (!row) return res.status(404).json({ error: 'Booking not found' });
-    if (!isRoot(req)) {
-      const scoped = allowedAttractions(req);
-      if (row.attraction_id && !scoped.includes(Number(row.attraction_id))) {
-        return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
-      }
+    // Scope check
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    if (row.attraction_id && attractionScope.length && !attractionScope.includes('*') && !attractionScope.includes(Number(row.attraction_id))) {
+      return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
     }
 
     const { rowCount } = await pool.query(`DELETE FROM bookings WHERE booking_id = $1`, [id]);
@@ -392,18 +398,18 @@ async function deleteBooking(req, res, next) {
   }
 }
 
-async function checkPayPhiStatusAdmin(req, res, next) {
+exports.checkPayPhiStatusAdmin = async function checkPayPhiStatusAdmin(req, res, next) {
   try {
     const id = Number(req.params.id);
 
     // Scope check
     const row = await bookingsModel.getBookingById(id);
     if (!row) return res.status(404).json({ error: 'Booking not found' });
-    if (!isRoot(req)) {
-      const scoped = allowedAttractions(req);
-      if (row.attraction_id && !scoped.includes(Number(row.attraction_id))) {
-        return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
-      }
+    // Scope check
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    if (row.attraction_id && attractionScope.length && !attractionScope.includes('*') && !attractionScope.includes(Number(row.attraction_id))) {
+      return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
     }
 
     const out = await bookingService.checkPayPhiStatus(id);
@@ -419,18 +425,17 @@ async function checkPayPhiStatusAdmin(req, res, next) {
   }
 }
 
-async function initiatePayPhiPaymentAdmin(req, res, next) {
+exports.initiatePayPhiPaymentAdmin = async function initiatePayPhiPaymentAdmin(req, res, next) {
   try {
     const id = Number(req.params.id);
     const b = await bookingsModel.getBookingById(id);
     if (!b) return res.status(404).json({ error: 'Booking not found' });
 
     // Scope check
-    if (!isRoot(req)) {
-      const scoped = allowedAttractions(req);
-      if (b.attraction_id && !scoped.includes(Number(b.attraction_id))) {
-        return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
-      }
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    if (b.attraction_id && attractionScope.length && !attractionScope.includes('*') && !attractionScope.includes(Number(b.attraction_id))) {
+      return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
     }
 
     const { email, mobile } = (req.body && typeof req.body === 'object') ? req.body : {};
@@ -442,18 +447,17 @@ async function initiatePayPhiPaymentAdmin(req, res, next) {
   }
 }
 
-async function refundPayPhi(req, res, next) {
+exports.refundPayPhi = async function refundPayPhi(req, res, next) {
   try {
     const id = Number(req.params.id);
     const b = await bookingsModel.getBookingById(id);
     if (!b) return res.status(404).json({ error: 'Booking not found' });
 
     // Scope check
-    if (!isRoot(req)) {
-      const scoped = allowedAttractions(req);
-      if (b.attraction_id && !scoped.includes(Number(b.attraction_id))) {
-        return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
-      }
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    if (b.attraction_id && attractionScope.length && !attractionScope.includes('*') && !attractionScope.includes(Number(b.attraction_id))) {
+      return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
     }
 
     if (b.payment_status !== 'Completed') return res.status(400).json({ error: 'Cannot refund: payment is not completed' });
@@ -481,15 +485,67 @@ async function refundPayPhi(req, res, next) {
   }
 }
 
-module.exports = {
-  listBookings,
-  getBookingById,
-  createManualBooking,
-  updateBooking,
-  cancelBooking,
-  deleteBooking,
-  checkPayPhiStatusAdmin,
-  initiatePayPhiPaymentAdmin,
-  refundPayPhi,
-  resendTicket,
+// Calendar view - bookings grouped by date
+exports.getBookingCalendar = async (req, res, next) => {
+  try {
+    const { from, to, attraction_id, combo_id } = req.query;
+    
+    // Scoping
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    const comboScope = scopes.combo || [];
+    
+    // Validate scope filters
+    if (attraction_id && attractionScope.length && !attractionScope.includes('*') && !attractionScope.includes(Number(attraction_id))) {
+      return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
+    }
+    if (combo_id && comboScope.length && !comboScope.includes('*') && !comboScope.includes(Number(combo_id))) {
+      return res.status(403).json({ error: 'Forbidden: combo not in scope' });
+    }
+
+    const bookings = await bookingsModel.getBookingsCalendar({
+      from: from || null,
+      to: to || null,
+      attraction_id: attraction_id ? Number(attraction_id) : null,
+      combo_id: combo_id ? Number(combo_id) : null,
+      attractionScope: attractionScope.includes('*') ? null : attractionScope,
+      comboScope: comboScope.includes('*') ? null : comboScope,
+    });
+
+    res.json(bookings);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Slots summary - available/booked slots per attraction/combo
+exports.getBookingSlots = async (req, res, next) => {
+  try {
+    const { date, attraction_id, combo_id } = req.query;
+    
+    // Scoping
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    const comboScope = scopes.combo || [];
+    
+    // Validate scope filters
+    if (attraction_id && attractionScope.length && !attractionScope.includes('*') && !attractionScope.includes(Number(attraction_id))) {
+      return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
+    }
+    if (combo_id && comboScope.length && !comboScope.includes('*') && !comboScope.includes(Number(combo_id))) {
+      return res.status(403).json({ error: 'Forbidden: combo not in scope' });
+    }
+
+    const slots = await bookingsModel.getBookingSlotsSummary({
+      date: date || null,
+      attraction_id: attraction_id ? Number(attraction_id) : null,
+      combo_id: combo_id ? Number(combo_id) : null,
+      attractionScope: attractionScope.includes('*') ? null : attractionScope,
+      comboScope: comboScope.includes('*') ? null : comboScope,
+    });
+
+    res.json(slots);
+  } catch (err) {
+    next(err);
+  }
 };

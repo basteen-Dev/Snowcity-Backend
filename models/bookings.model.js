@@ -522,6 +522,119 @@ async function updateBooking(booking_id, updates = {}) {
   return mapBooking(rows[0]);
 }
 
+// Calendar view - bookings grouped by date with scope filtering
+async function getBookingsCalendar({ from = null, to = null, attraction_id = null, combo_id = null, attractionScope = null, comboScope = null } = {}) {
+  const where = [];
+  const params = [];
+  let i = 1;
+
+  // Date range
+  if (from) {
+    where.push(`b.booking_date >= $${i++}`);
+    params.push(from);
+  }
+  if (to) {
+    where.push(`b.booking_date <= $${i++}`);
+    params.push(to);
+  }
+
+  // Attraction filter with scope
+  if (attraction_id) {
+    where.push(`b.attraction_id = $${i++}`);
+    params.push(attraction_id);
+  } else if (attractionScope && Array.isArray(attractionScope) && attractionScope.length) {
+    where.push(`b.attraction_id = ANY($${i++}::bigint[])`);
+    params.push(attractionScope);
+  }
+
+  // Combo filter with scope
+  if (combo_id) {
+    where.push(`b.combo_id = $${i++}`);
+    params.push(combo_id);
+  } else if (comboScope && Array.isArray(comboScope) && comboScope.length) {
+    where.push(`b.combo_id = ANY($${i++}::bigint[])`);
+    params.push(comboScope);
+  }
+
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  
+  const { rows } = await pool.query(
+    `SELECT 
+       b.booking_date,
+       COUNT(*) as total_bookings,
+       COUNT(*) FILTER (WHERE b.payment_status = 'Completed') as paid_bookings,
+       SUM(b.quantity) FILTER (WHERE b.payment_status = 'Completed') as total_people,
+       COALESCE(SUM(b.final_amount), SUM(b.total_amount), 0) FILTER (WHERE b.payment_status = 'Completed') as total_revenue
+     FROM bookings b
+     ${whereSql}
+     GROUP BY b.booking_date
+     ORDER BY b.booking_date DESC`,
+    params
+  );
+  
+  return rows;
+}
+
+// Slots summary - available/booked slots per attraction/combo with scope filtering
+async function getBookingSlotsSummary({ date = null, attraction_id = null, combo_id = null, attractionScope = null, comboScope = null } = {}) {
+  const where = [];
+  const params = [];
+  let i = 1;
+
+  // Date filter
+  if (date) {
+    where.push(`b.booking_date = $${i++}`);
+    params.push(date);
+  }
+
+  // Attraction filter with scope
+  if (attraction_id) {
+    where.push(`b.attraction_id = $${i++}`);
+    params.push(attraction_id);
+  } else if (attractionScope && Array.isArray(attractionScope) && attractionScope.length) {
+    where.push(`b.attraction_id = ANY($${i++}::bigint[])`);
+    params.push(attractionScope);
+  }
+
+  // Combo filter with scope
+  if (combo_id) {
+    where.push(`b.combo_id = $${i++}`);
+    params.push(combo_id);
+  } else if (comboScope && Array.isArray(comboScope) && comboScope.length) {
+    where.push(`b.combo_id = ANY($${i++}::bigint[])`);
+    params.push(comboScope);
+  }
+
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  
+  const { rows } = await pool.query(
+    `SELECT 
+       CASE 
+         WHEN b.combo_id IS NOT NULL THEN CONCAT('Combo #', b.combo_id)
+         ELSE CONCAT('Attraction #', b.attraction_id)
+       END as resource_id,
+       CASE 
+         WHEN b.combo_id IS NOT NULL THEN c.title
+         ELSE a.title
+       END as resource_title,
+       b.booking_time,
+       COUNT(*) as booked_slots,
+       SUM(b.quantity) as total_quantity
+     FROM bookings b
+     LEFT JOIN attractions a ON a.attraction_id = b.attraction_id
+     LEFT JOIN combos c ON c.combo_id = b.combo_id
+     ${whereSql}
+     GROUP BY 
+       CASE WHEN b.combo_id IS NOT NULL THEN b.combo_id ELSE b.attraction_id END,
+       CASE WHEN b.combo_id IS NOT NULL THEN c.title ELSE a.title END,
+       b.booking_time
+     ORDER BY b.booking_time`,
+    params
+  );
+  
+  return rows;
+}
+
 module.exports = {
   getBookingById,
   getOrderWithDetails,
@@ -530,5 +643,7 @@ module.exports = {
   createBooking,        // Legacy / Internal use
   updatePaymentStatus,
   cancelOrder,
-  updateBooking
+  updateBooking,
+  getBookingsCalendar,
+  getBookingSlotsSummary
 };

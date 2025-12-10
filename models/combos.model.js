@@ -12,6 +12,7 @@ function mapCombo(row) {
     attraction_prices: row.attraction_prices || {},
     total_price: Number(row.total_price) || 0,
     image_url: row.image_url,
+    desktop_image_url: row.desktop_image_url,
     discount_percent: Number(row.discount_percent) || 0,
     active: Boolean(row.active),
     create_slots: Boolean(row.create_slots),
@@ -32,6 +33,7 @@ async function createCombo({
   attraction_prices, 
   total_price, 
   image_url, 
+  desktop_image_url = null,
   discount_percent = 0, 
   active = true 
 }) {
@@ -41,10 +43,10 @@ async function createCombo({
     
     // Insert combo
     const { rows } = await client.query(
-      `INSERT INTO combos (name, attraction_ids, attraction_prices, total_price, image_url, discount_percent, active, create_slots)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, true)
+      `INSERT INTO combos (name, attraction_ids, attraction_prices, total_price, image_url, desktop_image_url, discount_percent, active, create_slots)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
        RETURNING *`,
-      [name, attraction_ids, attraction_prices, total_price, image_url, discount_percent, active]
+      [name, attraction_ids, attraction_prices, total_price, image_url, desktop_image_url, discount_percent, active]
     );
     
     const combo = mapCombo(rows[0]);
@@ -92,12 +94,16 @@ async function getComboById(combo_id) {
   return mapCombo(rows[0]);
 }
 
-async function listCombos({ active = null } = {}) {
+async function listCombos({ active = null, comboIds = null } = {}) {
   const where = [];
   const params = [];
   if (active != null) {
     where.push('cd.active = $1');
     params.push(Boolean(active));
+  }
+  if (Array.isArray(comboIds) && comboIds.length) {
+    where.push(`cd.combo_id = ANY($${params.length + 1}::bigint[])`);
+    params.push(comboIds);
   }
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const { rows } = await pool.query(

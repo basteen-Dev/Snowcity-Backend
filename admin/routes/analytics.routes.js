@@ -18,7 +18,85 @@ router.get('/attractions-breakdown', async (req, res, next) => {
   try {
     const { from = null, to = null } = req.query;
     const limit = Math.min(parseInt(req.query.limit || '50', 10), 200);
-    const data = await adminModel.getAttractionBreakdown({ from, to, limit });
+    
+    // Apply attraction scope for subadmins
+    const scopes = req.user?.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    let attractionIds = null;
+    
+    // If subadmin, restrict to their allowed attractions
+    if (!attractionScope.includes('*') && attractionScope.length > 0) {
+      attractionIds = attractionScope;
+    }
+    
+    const data = await adminModel.getAttractionBreakdown({ from, to, limit, attraction_ids: attractionIds });
+    res.json(data);
+  } catch (err) { next(err); }
+});
+
+// Separate attraction revenue endpoint
+router.get('/attraction-revenue', async (req, res, next) => {
+  try {
+    const { from = null, to = null, attraction_id = null } = req.query;
+    
+    // Apply attraction scope for subadmins
+    const scopes = req.user?.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    let finalAttractionId = attraction_id;
+    
+    // If subadmin, restrict to their allowed attractions
+    if (!attractionScope.includes('*') && attractionScope.length > 0) {
+      // If a specific attraction is requested, verify it's in their scope
+      if (attraction_id) {
+        if (!attractionScope.includes(Number(attraction_id))) {
+          return res.status(403).json({ error: 'Access denied: Attraction not in your scope' });
+        }
+      } else {
+        // Use first allowed attraction as default for subadmins
+        finalAttractionId = attractionScope[0];
+      }
+    }
+    
+    const data = await adminModel.getAttractionRevenueStats({ from, to, attraction_id: finalAttractionId });
+    res.json(data);
+  } catch (err) { next(err); }
+});
+
+// Separate combo revenue endpoint  
+router.get('/combo-revenue', async (req, res, next) => {
+  try {
+    const { from = null, to = null, attraction_id = null, combo_id = null } = req.query;
+    
+    // Apply scopes for subadmins
+    const scopes = req.user?.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    const comboScope = scopes.combo || [];
+    let finalAttractionId = attraction_id;
+    let finalComboId = combo_id;
+    
+    // If subadmin, restrict to their allowed attractions/combos
+    if (!attractionScope.includes('*') && attractionScope.length > 0) {
+      // If a specific attraction is requested, verify it's in their scope
+      if (attraction_id) {
+        if (!attractionScope.includes(Number(attraction_id))) {
+          return res.status(403).json({ error: 'Access denied: Attraction not in your scope' });
+        }
+      } else {
+        // Use first allowed attraction as default for subadmins
+        finalAttractionId = attractionScope[0];
+      }
+    }
+    
+    // Check combo access
+    if (!comboScope.includes('*') && comboScope.length > 0) {
+      if (combo_id) {
+        if (!comboScope.includes(Number(combo_id))) {
+          return res.status(403).json({ error: 'Access denied: Combo not in your scope' });
+        }
+      }
+    }
+    
+    const data = await adminModel.getComboOfferStats({ from, to, attraction_id: finalAttractionId, combo_id: finalComboId });
     res.json(data);
   } catch (err) { next(err); }
 });
@@ -27,7 +105,18 @@ router.get('/attractions-breakdown', async (req, res, next) => {
 router.get('/daily', async (req, res, next) => {
   try {
     const { from = null, to = null } = req.query;
-    const data = await adminModel.getSalesTrend({ from, to, granularity: 'day' });
+    
+    // Apply attraction scope for subadmins
+    const scopes = req.user?.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    let attractionId = null;
+    
+    // If subadmin with limited attractions, use first one
+    if (!attractionScope.includes('*') && attractionScope.length > 0) {
+      attractionId = attractionScope[0];
+    }
+    
+    const data = await adminModel.getSalesTrend({ from, to, granularity: 'day', attraction_id: attractionId });
     res.json(data);
   } catch (err) { next(err); }
 });
@@ -36,7 +125,18 @@ router.get('/daily', async (req, res, next) => {
 router.get('/split', async (req, res, next) => {
   try {
     const { from = null, to = null, group_by = 'payment_status' } = req.query;
-    const data = await adminModel.getSplitData({ from, to, group_by });
+    
+    // Apply attraction scope for subadmins
+    const scopes = req.user?.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    let attractionId = null;
+    
+    // If subadmin with limited attractions, use first one
+    if (!attractionScope.includes('*') && attractionScope.length > 0) {
+      attractionId = attractionScope[0];
+    }
+    
+    const data = await adminModel.getSplitData({ from, to, group_by, attraction_id: attractionId });
     res.json({ group_by, data });
   } catch (err) { next(err); }
 });
@@ -56,7 +156,7 @@ function toCsv(rows, headers) {
   return head + '\n' + body + '\n';
 }
 
-async function getReportRows({ type = 'bookings', from = null, to = null, attraction_id = null, group_by = 'payment_status' }) {
+async function getReportRows({ type = 'bookings', from = null, to = null, attraction_id = null, combo_id = null, group_by = 'payment_status' }) {
   switch (type) {
     case 'top-attractions':
       return await adminModel.getTopAttractions({ from, to, limit: 100, attraction_id });
@@ -65,6 +165,12 @@ async function getReportRows({ type = 'bookings', from = null, to = null, attrac
       return await adminModel.getSalesTrend({ from, to, granularity: 'day', attraction_id });
     case 'attractions-breakdown':
       return await adminModel.getAttractionBreakdown({ from, to, limit: 500 });
+    case 'attraction-revenue':
+      const attractionStats = await adminModel.getAttractionRevenueStats({ from, to, attraction_id });
+      return [{ type: 'Attraction', bookings: attractionStats.attraction_bookings, revenue: attractionStats.attraction_revenue }];
+    case 'combo-revenue':
+      const comboStats = await adminModel.getComboOfferStats({ from, to, attraction_id, combo_id });
+      return [{ type: 'Combo', bookings: comboStats.combo_bookings, revenue: comboStats.combo_revenue }];
     case 'split':
       return (await adminModel.getSplitData({ from, to, group_by })) || [];
     case 'bookings':
@@ -76,43 +182,80 @@ async function getReportRows({ type = 'bookings', from = null, to = null, attrac
 function resolveHeaders(type) {
   if (type === 'top-attractions' || type === 'attractions-breakdown') {
     return [
-      { label: 'Attraction ID', key: 'attraction_id', get: (r) => r.attraction_id },
-      { label: 'Title', key: 'title', get: (r) => r.title },
-      { label: 'Bookings', key: 'bookings', get: (r) => r.bookings ?? r.total_bookings },
-      { label: 'People', key: 'people', get: (r) => r.people ?? r.total_people ?? '' },
-      { label: 'Revenue', key: 'revenue', get: (r) => r.revenue ?? r.total_revenue },
+      { label: 'Attraction ID', get: (r) => r.attraction_id },
+      { label: 'Title', get: (r) => r.title },
+      { label: 'Bookings', get: (r) => r.bookings },
+      { label: 'People', get: (r) => r.people },
+      { label: 'Revenue', get: (r) => r.revenue },
     ];
   }
   if (type === 'trend' || type === 'daily') {
     return [
-      { label: 'Bucket', key: 'bucket', get: (r) => r.bucket },
-      { label: 'Bookings', key: 'bookings', get: (r) => r.bookings },
-      { label: 'People', key: 'people', get: (r) => r.people ?? '' },
-      { label: 'Revenue', key: 'revenue', get: (r) => r.revenue },
+      { label: 'Date', get: (r) => r.bucket },
+      { label: 'Bookings', get: (r) => r.bookings },
+      { label: 'People', get: (r) => r.people },
+      { label: 'Revenue', get: (r) => r.revenue },
+    ];
+  }
+  if (type === 'attraction-revenue' || type === 'combo-revenue') {
+    return [
+      { label: 'Type', get: (r) => r.type },
+      { label: 'Bookings', get: (r) => r.bookings },
+      { label: 'Revenue', get: (r) => r.revenue },
     ];
   }
   if (type === 'split') {
+    const labels = {
+      payment_status: ['Payment Status', 'payment_status'],
+      booking_status: ['Booking Status', 'booking_status'],
+      item_type: ['Item Type', 'item_type'],
+    };
+    const [label, key] = labels[req?.query?.group_by] || labels.payment_status;
     return [
-      { label: 'Key', key: 'key', get: (r) => r.key },
-      { label: 'Bookings', key: 'bookings', get: (r) => r.bookings },
-      { label: 'People', key: 'people', get: (r) => r.people ?? '' },
-      { label: 'Revenue', key: 'revenue', get: (r) => r.revenue },
+      { label, get: (r) => r[key] },
+      { label: 'Bookings', get: (r) => r.bookings },
+      { label: 'People', get: (r) => r.people },
+      { label: 'Revenue', get: (r) => r.revenue },
     ];
   }
   return [
-    { label: 'Booking Ref', key: 'booking_ref', get: (r) => r.booking_ref },
-    { label: 'User Email', key: 'user_email', get: (r) => r.user_email },
-    { label: 'Attraction', key: 'attraction_title', get: (r) => r.attraction_title },
-    { label: 'Amount', key: 'final_amount', get: (r) => r.final_amount },
-    { label: 'Payment', key: 'payment_status', get: (r) => r.payment_status },
-    { label: 'Created At', key: 'created_at', get: (r) => r.created_at },
+    { label: 'Booking ID', get: (r) => r.booking_id },
+    { label: 'Customer', get: (r) => r.customer_name },
+    { label: 'Email', get: (r) => r.customer_email },
+    { label: 'Attraction', get: (r) => r.attraction_title },
+    { label: 'Date', get: (r) => r.booking_date },
+    { label: 'People', get: (r) => r.quantity },
+    { label: 'Amount', get: (r) => r.final_amount },
+    { label: 'Payment Status', get: (r) => r.payment_status },
   ];
 }
 
 router.get('/report.csv', async (req, res, next) => {
   try {
-    const { type = 'bookings', from = null, to = null, attraction_id = null, group_by = 'payment_status' } = req.query;
-    const rows = await getReportRows({ type, from, to, attraction_id: attraction_id ? Number(attraction_id) : null, group_by });
+    const { type = 'bookings', from = null, to = null, attraction_id = null, combo_id = null, group_by = 'payment_status' } = req.query;
+    
+    // Apply scopes for subadmins
+    const scopes = req.user?.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    const comboScope = scopes.combo || [];
+    let finalAttractionId = attraction_id ? Number(attraction_id) : null;
+    let finalComboId = combo_id ? Number(combo_id) : null;
+    
+    // Validate attraction access
+    if (!attractionScope.includes('*') && attractionScope.length > 0) {
+      if (finalAttractionId && !attractionScope.includes(finalAttractionId)) {
+        return res.status(403).json({ error: 'Access denied: Attraction not in your scope' });
+      }
+    }
+    
+    // Validate combo access
+    if (!comboScope.includes('*') && comboScope.length > 0) {
+      if (finalComboId && !comboScope.includes(finalComboId)) {
+        return res.status(403).json({ error: 'Access denied: Combo not in your scope' });
+      }
+    }
+    
+    const rows = await getReportRows({ type, from, to, attraction_id: finalAttractionId, combo_id: finalComboId, group_by });
     const headers = resolveHeaders(type);
     const csv = toCsv(rows, headers);
     res.setHeader('Content-Type', 'text/csv');
@@ -123,17 +266,39 @@ router.get('/report.csv', async (req, res, next) => {
 
 router.get('/report.xlsx', async (req, res, next) => {
   try {
-    const { type = 'bookings', from = null, to = null, attraction_id = null, group_by = 'payment_status' } = req.query;
-    const rows = await getReportRows({ type, from, to, attraction_id: attraction_id ? Number(attraction_id) : null, group_by });
+    const { type = 'bookings', from = null, to = null, attraction_id = null, combo_id = null, group_by = 'payment_status' } = req.query;
+    
+    // Apply scopes for subadmins
+    const scopes = req.user?.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    const comboScope = scopes.combo || [];
+    let finalAttractionId = attraction_id ? Number(attraction_id) : null;
+    let finalComboId = combo_id ? Number(combo_id) : null;
+    
+    // Validate attraction access
+    if (!attractionScope.includes('*') && attractionScope.length > 0) {
+      if (finalAttractionId && !attractionScope.includes(finalAttractionId)) {
+        return res.status(403).json({ error: 'Access denied: Attraction not in your scope' });
+      }
+    }
+    
+    // Validate combo access
+    if (!comboScope.includes('*') && comboScope.length > 0) {
+      if (finalComboId && !comboScope.includes(finalComboId)) {
+        return res.status(403).json({ error: 'Access denied: Combo not in your scope' });
+      }
+    }
+    
+    const rows = await getReportRows({ type, from, to, attraction_id: finalAttractionId, combo_id: finalComboId, group_by });
     const headers = resolveHeaders(type);
 
     const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet('Report');
-    sheet.columns = headers.map((h) => ({ header: h.label, key: h.key, width: 25 }));
+    const worksheet = workbook.addWorksheet('Report');
+    worksheet.columns = headers.map((h) => ({ header: h.label, key: h.key, width: 25 }));
     rows.forEach((row) => {
       const values = {};
       headers.forEach((h) => { values[h.key] = h.get(row); });
-      sheet.addRow(values);
+      worksheet.addRow(values);
     });
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -145,8 +310,30 @@ router.get('/report.xlsx', async (req, res, next) => {
 
 router.get('/report.pdf', async (req, res, next) => {
   try {
-    const { type = 'bookings', from = null, to = null, attraction_id = null, group_by = 'payment_status' } = req.query;
-    const rows = await getReportRows({ type, from, to, attraction_id: attraction_id ? Number(attraction_id) : null, group_by });
+    const { type = 'bookings', from = null, to = null, attraction_id = null, combo_id = null, group_by = 'payment_status' } = req.query;
+    
+    // Apply scopes for subadmins
+    const scopes = req.user?.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    const comboScope = scopes.combo || [];
+    let finalAttractionId = attraction_id ? Number(attraction_id) : null;
+    let finalComboId = combo_id ? Number(combo_id) : null;
+    
+    // Validate attraction access
+    if (!attractionScope.includes('*') && attractionScope.length > 0) {
+      if (finalAttractionId && !attractionScope.includes(finalAttractionId)) {
+        return res.status(403).json({ error: 'Access denied: Attraction not in your scope' });
+      }
+    }
+    
+    // Validate combo access
+    if (!comboScope.includes('*') && comboScope.length > 0) {
+      if (finalComboId && !comboScope.includes(finalComboId)) {
+        return res.status(403).json({ error: 'Access denied: Combo not in your scope' });
+      }
+    }
+    
+    const rows = await getReportRows({ type, from, to, attraction_id: finalAttractionId, combo_id: finalComboId, group_by });
     const headers = resolveHeaders(type);
 
     const doc = new PDFDocument({ margin: 40, size: 'A4' });

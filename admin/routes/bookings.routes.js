@@ -14,9 +14,13 @@ must('deleteBooking', ctrl.deleteBooking);
 must('checkPayPhiStatusAdmin', ctrl.checkPayPhiStatusAdmin);
 must('initiatePayPhiPaymentAdmin', ctrl.initiatePayPhiPaymentAdmin);
 must('refundPayPhi', ctrl.refundPayPhi);
+must('getBookingCalendar', ctrl.getBookingCalendar);
+must('getBookingSlots', ctrl.getBookingSlots);
 
 // List + read - No permissions required
 router.get('/', ctrl.listBookings);
+router.get('/calendar', ctrl.getBookingCalendar);
+router.get('/slots', ctrl.getBookingSlots);
 router.get('/:id', ctrl.getBookingById);
 
 // Create/update/delete - No permissions required

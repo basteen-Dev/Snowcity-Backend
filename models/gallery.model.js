@@ -57,7 +57,7 @@ async function getById(id) {
   return map(rows[0]);
 }
 
-async function list({ active = null, q = '', target_type = null, target_ref_id = null, limit = 50, offset = 0 } = {}) {
+async function list({ active = null, q = '', target_type = null, target_ref_id = null, limit = 50, offset = 0, galleryIds = null } = {}) {
   const where = [];
   const params = [];
   let i = 1;
@@ -84,6 +84,11 @@ async function list({ active = null, q = '', target_type = null, target_ref_id =
     }
     where.push(`target_ref_id = $${i++}`);
     params.push(ref);
+  }
+  if (Array.isArray(galleryIds) && galleryIds.length) {
+    where.push(`gallery_item_id = ANY($${i}::bigint[])`);
+    params.push(galleryIds);
+    i += 1;
   }
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const { rows } = await pool.query(

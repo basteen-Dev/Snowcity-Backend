@@ -1,6 +1,7 @@
 // admin/controllers/blogs.controller.js
 const blogsModel = require('../../models/blogs.model');
 const blogService = require('../../services/blogService');
+const { buildScopeFilter } = require('../middleware/scopedAccess');
 
 // List blogs with filters/pagination
 async function listBlogs(req, res, next) {
@@ -11,6 +12,16 @@ async function listBlogs(req, res, next) {
     const page = Math.max(parseInt(req.query.page || '1', 10), 1);
     const limit = Math.min(Math.max(parseInt(req.query.limit || '20', 10), 1), 100);
     const offset = (page - 1) * limit;
+
+    // Scope: only return blogs this admin can access
+    const scopes = req.user.scopes || {};
+    const blogScope = scopes.blog || [];
+    if (!blogScope.includes('*')) {
+      // If no full access, enforce list filter
+      const scopedIds = blogScope.length ? blogScope : [null];
+      const data = await blogsModel.listBlogs({ active, q, limit, offset, blogIds: scopedIds });
+      return res.json({ data, meta: { page, limit, count: data.length } });
+    }
 
     const data = await blogsModel.listBlogs({ active, q, limit, offset });
     res.json({ data, meta: { page, limit, count: data.length } });
@@ -23,6 +34,11 @@ async function listBlogs(req, res, next) {
 async function getBlogById(req, res, next) {
   try {
     const id = Number(req.params.id);
+    const scopes = req.user.scopes || {};
+    const blogScope = scopes.blog || [];
+    if (blogScope.length && !blogScope.includes('*') && !blogScope.includes(id)) {
+      return res.status(403).json({ error: 'Forbidden: blog not in scope' });
+    }
     const row = await blogsModel.getBlogById(id);
     if (!row) return res.status(404).json({ error: 'Blog not found' });
     res.json(row);
@@ -34,6 +50,12 @@ async function getBlogById(req, res, next) {
 // Create blog (supports rich or raw editor)
 async function createBlog(req, res, next) {
   try {
+    // Scope: only admins with full blog module access can create
+    const scopes = req.user.scopes || {};
+    const blogScope = scopes.blog || [];
+    if (!blogScope.includes('*')) {
+      return res.status(403).json({ error: 'Forbidden: requires full blog module access' });
+    }
     const p = req.body || {};
     const payload = {
       title: p.title,
@@ -64,6 +86,11 @@ async function createBlog(req, res, next) {
 async function updateBlog(req, res, next) {
   try {
     const id = Number(req.params.id);
+    const scopes = req.user.scopes || {};
+    const blogScope = scopes.blog || [];
+    if (blogScope.length && !blogScope.includes('*') && !blogScope.includes(id)) {
+      return res.status(403).json({ error: 'Forbidden: blog not in scope' });
+    }
     const p = req.body || {};
     const payload = {
       title: p.title,
@@ -95,6 +122,11 @@ async function updateBlog(req, res, next) {
 async function deleteBlog(req, res, next) {
   try {
     const id = Number(req.params.id);
+    const scopes = req.user.scopes || {};
+    const blogScope = scopes.blog || [];
+    if (blogScope.length && !blogScope.includes('*') && !blogScope.includes(id)) {
+      return res.status(403).json({ error: 'Forbidden: blog not in scope' });
+    }
     const ok = await blogsModel.deleteBlog(id);
     if (!ok) return res.status(404).json({ error: 'Blog not found' });
     res.json({ deleted: true });

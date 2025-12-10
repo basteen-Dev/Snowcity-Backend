@@ -86,16 +86,18 @@ async function getTopAttractions({ from = null, to = null, limit = 10, attractio
 }
 
 // Combo vs offer contribution stats
-async function getComboOfferStats({ from = null, to = null, attraction_id = null } = {}) {
+async function getComboOfferStats({ from = null, to = null, attraction_id = null, combo_id = null } = {}) {
   const sql = `
     SELECT
       COUNT(*) FILTER (
         WHERE b.parent_booking_id IS NULL
           AND b.item_type = 'Combo'
           AND b.payment_status = 'Completed'
+          AND ($4::bigint IS NULL OR b.combo_id = $4::bigint)
       )::int AS combo_bookings,
       COALESCE(SUM(CASE
         WHEN b.parent_booking_id IS NULL AND b.item_type = 'Combo' AND b.payment_status = 'Completed'
+          AND ($4::bigint IS NULL OR b.combo_id = $4::bigint)
           THEN COALESCE(b.final_amount, b.total_amount, 0)
       END), 0) AS combo_revenue,
       COUNT(*) FILTER (
@@ -113,13 +115,42 @@ async function getComboOfferStats({ from = null, to = null, attraction_id = null
       AND b.booking_date <= COALESCE($2::date, CURRENT_DATE)
       AND ($3::bigint IS NULL OR b.attraction_id = $3::bigint);
   `;
-  const { rows } = await pool.query(sql, [from, to, attraction_id]);
+  const { rows } = await pool.query(sql, [from, to, attraction_id, combo_id]);
   const stats = rows[0] || {};
   return {
     combo_bookings: Number(stats.combo_bookings || 0),
     combo_revenue: Number(stats.combo_revenue || 0),
     offer_bookings: Number(stats.offer_bookings || 0),
     offer_revenue: Number(stats.offer_revenue || 0),
+  };
+}
+
+// Separate attraction revenue stats
+async function getAttractionRevenueStats({ from = null, to = null, attraction_id = null } = {}) {
+  const sql = `
+    SELECT
+      COUNT(*) FILTER (
+        WHERE b.parent_booking_id IS NULL
+          AND b.item_type = 'Attraction'
+          AND b.payment_status = 'Completed'
+          AND ($3::bigint IS NULL OR b.attraction_id = $3::bigint)
+      )::int AS attraction_bookings,
+      COALESCE(SUM(CASE
+        WHEN b.parent_booking_id IS NULL AND b.item_type = 'Attraction' AND b.payment_status = 'Completed'
+          AND ($3::bigint IS NULL OR b.attraction_id = $3::bigint)
+          THEN COALESCE(b.final_amount, b.total_amount, 0)
+      END), 0) AS attraction_revenue
+    FROM bookings b
+    WHERE b.booking_status <> 'Cancelled'
+      AND b.booking_date >= COALESCE($1::date, CURRENT_DATE - INTERVAL '30 days')
+      AND b.booking_date <= COALESCE($2::date, CURRENT_DATE)
+      AND b.item_type = 'Attraction';
+  `;
+  const { rows } = await pool.query(sql, [from, to, attraction_id]);
+  const stats = rows[0] || {};
+  return {
+    attraction_bookings: Number(stats.attraction_bookings || 0),
+    attraction_revenue: Number(stats.attraction_revenue || 0),
   };
 }
 
@@ -280,16 +311,17 @@ async function getUserPermissions(userId) {
 }
 
 // Admin overview: combine summary + breakdown + top + trend
-async function getAdminOverview({ from = null, to = null, attraction_id = null } = {}) {
-  const [summary, statusBreakdown, topAttractions, trend, comboOffers] = await Promise.all([
+async function getAdminOverview({ from = null, to = null, attraction_id = null, combo_id = null } = {}) {
+  const [summary, statusBreakdown, topAttractions, trend, comboOffers, attractionStats] = await Promise.all([
     getDashboardSummary({ from, to, attraction_id }),
     getBookingCountsByStatus({ from, to, attraction_id }),
     getTopAttractions({ from, to, limit: 5, attraction_id }),
     getSalesTrend({ from, to, granularity: 'day', attraction_id }),
-    getComboOfferStats({ from, to, attraction_id }),
+    getComboOfferStats({ from, to, attraction_id, combo_id }),
+    getAttractionRevenueStats({ from, to, attraction_id }),
   ]);
 
-  return { summary: { ...summary, ...comboOffers }, statusBreakdown, topAttractions, trend };
+  return { summary: { ...summary, ...comboOffers, ...attractionStats }, statusBreakdown, topAttractions, trend };
 }
 
 // Attractions-wise breakdown within range
@@ -343,6 +375,7 @@ module.exports = {
   getRecentBookings,
   getBookingCountsByStatus,
   getComboOfferStats,
+  getAttractionRevenueStats,
   listAdmins,
   ensureRole,
   assignRoleByName,

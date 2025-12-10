@@ -12,6 +12,7 @@ const createAttractionValidator = [
   body('slug').optional({ nullable: true }).isString().trim(),
   body('description').optional({ nullable: true }).isString(),
   body('image_url').optional({ nullable: true }).isURL().withMessage('image_url must be valid URL'),
+  body('desktop_image_url').optional({ nullable: true }).isURL().withMessage('desktop_image_url must be valid URL'),
   body('gallery').optional({ nullable: true }).isArray(),
   body('gallery.*').optional().isURL(),
   body('base_price').optional().isFloat({ min: 0 }).toFloat(),

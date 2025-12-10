@@ -37,6 +37,24 @@ async function applyOfferPricing({
   }
 
   const { offer, rule } = match;
+  // Defensive check: for happy_hour rules ensure booking_time falls within rule window
+  const matchTime = booking_time || null;
+  try {
+    if (offer?.rule_type === 'happy_hour') {
+      const ruleFrom = rule?.time_from || null;
+      const ruleTo = rule?.time_to || null;
+      if (!ruleFrom || !ruleTo || !matchTime) {
+        return { unit: base, discount: 0, discount_percent: 0, offer: null };
+      }
+      // Compare strings 'HH:MM:SS' directly is safe for same-day times
+      if (String(matchTime) < String(ruleFrom) || String(matchTime) > String(ruleTo)) {
+        return { unit: base, discount: 0, discount_percent: 0, offer: null };
+      }
+    }
+  } catch (err) {
+    // If any unexpected error, bail out to avoid wrongly applying discounts
+    return { unit: base, discount: 0, discount_percent: 0, offer: null };
+  }
   let discountType = rule?.rule_discount_type || offer.discount_type || (offer.discount_percent ? 'percent' : null);
   let discountValue = rule?.rule_discount_value ?? offer.discount_value ?? offer.discount_percent ?? 0;
 
