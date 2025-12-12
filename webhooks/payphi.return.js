@@ -30,8 +30,8 @@ const resolveClientBaseUrl = () => {
     .map((val) => String(val || '').trim())
     .filter(Boolean);
   const fallback = process.env.NODE_ENV === 'development'
-    ? 'https://snowpark.netlify.app'
-    : 'https://snowpark.netlify.app';
+    ? 'http://localhost:5173'
+    : 'http://localhost:5173';
   const base = entries[0] || fallback;
   return base.replace(/\/$/, '');
 };

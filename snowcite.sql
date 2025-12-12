@@ -2,12 +2,12 @@
 -- PostgreSQL database dump
 --
 
-\restrict FkvAxBvXNWnj0h6wNpEzaDSys9bxKQD0JEL2vxfE7vhFB5uUkc8YbPuRMbmcUSn
+\restrict dwRYIfCOFrLJ47bjJf2OdLzy6ajk5jLHvlMgDTPls2s7hdWUnz6LZcMcNMb17nD
 
 -- Dumped from database version 18.1 (Debian 18.1-1.pgdg12+2)
 -- Dumped by pg_dump version 18.0
 
--- Started on 2025-12-03 12:37:18
+-- Started on 2025-12-12 13:17:03
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -32,7 +32,7 @@ SET row_security = off;
 ALTER SCHEMA public OWNER TO root;
 
 --
--- TOC entry 4128 (class 0 OID 0)
+-- TOC entry 4145 (class 0 OID 0)
 -- Dependencies: 6
 -- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: root
 --
@@ -49,7 +49,7 @@ CREATE EXTENSION IF NOT EXISTS citext WITH SCHEMA public;
 
 
 --
--- TOC entry 4130 (class 0 OID 0)
+-- TOC entry 4147 (class 0 OID 0)
 -- Dependencies: 2
 -- Name: EXTENSION citext; Type: COMMENT; Schema: -; Owner: 
 --
@@ -58,7 +58,7 @@ COMMENT ON EXTENSION citext IS 'data type for case-insensitive character strings
 
 
 --
--- TOC entry 992 (class 1247 OID 18446)
+-- TOC entry 994 (class 1247 OID 18446)
 -- Name: api_status; Type: TYPE; Schema: public; Owner: root
 --
 
@@ -71,7 +71,7 @@ CREATE TYPE public.api_status AS ENUM (
 ALTER TYPE public.api_status OWNER TO root;
 
 --
--- TOC entry 998 (class 1247 OID 18462)
+-- TOC entry 1000 (class 1247 OID 18462)
 -- Name: booking_item_type; Type: TYPE; Schema: public; Owner: root
 --
 
@@ -84,7 +84,7 @@ CREATE TYPE public.booking_item_type AS ENUM (
 ALTER TYPE public.booking_item_type OWNER TO root;
 
 --
--- TOC entry 977 (class 1247 OID 18404)
+-- TOC entry 979 (class 1247 OID 18404)
 -- Name: booking_status; Type: TYPE; Schema: public; Owner: root
 --
 
@@ -99,7 +99,7 @@ CREATE TYPE public.booking_status AS ENUM (
 ALTER TYPE public.booking_status OWNER TO root;
 
 --
--- TOC entry 995 (class 1247 OID 18452)
+-- TOC entry 997 (class 1247 OID 18452)
 -- Name: cart_status; Type: TYPE; Schema: public; Owner: root
 --
 
@@ -114,7 +114,7 @@ CREATE TYPE public.cart_status AS ENUM (
 ALTER TYPE public.cart_status OWNER TO root;
 
 --
--- TOC entry 989 (class 1247 OID 18436)
+-- TOC entry 991 (class 1247 OID 18436)
 -- Name: coupon_type; Type: TYPE; Schema: public; Owner: root
 --
 
@@ -129,7 +129,7 @@ CREATE TYPE public.coupon_type AS ENUM (
 ALTER TYPE public.coupon_type OWNER TO root;
 
 --
--- TOC entry 980 (class 1247 OID 18414)
+-- TOC entry 982 (class 1247 OID 18414)
 -- Name: notification_channel; Type: TYPE; Schema: public; Owner: root
 --
 
@@ -142,7 +142,7 @@ CREATE TYPE public.notification_channel AS ENUM (
 ALTER TYPE public.notification_channel OWNER TO root;
 
 --
--- TOC entry 983 (class 1247 OID 18420)
+-- TOC entry 985 (class 1247 OID 18420)
 -- Name: notification_status; Type: TYPE; Schema: public; Owner: root
 --
 
@@ -156,21 +156,23 @@ CREATE TYPE public.notification_status AS ENUM (
 ALTER TYPE public.notification_status OWNER TO root;
 
 --
--- TOC entry 986 (class 1247 OID 18428)
+-- TOC entry 988 (class 1247 OID 18428)
 -- Name: offer_rule_type; Type: TYPE; Schema: public; Owner: root
 --
 
 CREATE TYPE public.offer_rule_type AS ENUM (
     'holiday',
     'happy_hour',
-    'weekday_special'
+    'weekday_special',
+    'dynamic_pricing',
+    'date_slot_pricing'
 );
 
 
 ALTER TYPE public.offer_rule_type OWNER TO root;
 
 --
--- TOC entry 974 (class 1247 OID 18398)
+-- TOC entry 976 (class 1247 OID 18398)
 -- Name: payment_mode; Type: TYPE; Schema: public; Owner: root
 --
 
@@ -183,7 +185,7 @@ CREATE TYPE public.payment_mode AS ENUM (
 ALTER TYPE public.payment_mode OWNER TO root;
 
 --
--- TOC entry 971 (class 1247 OID 18389)
+-- TOC entry 973 (class 1247 OID 18389)
 -- Name: payment_status; Type: TYPE; Schema: public; Owner: root
 --
 
@@ -198,7 +200,7 @@ CREATE TYPE public.payment_status AS ENUM (
 ALTER TYPE public.payment_status OWNER TO root;
 
 --
--- TOC entry 345 (class 1255 OID 18467)
+-- TOC entry 346 (class 1255 OID 18467)
 -- Name: set_updated_at(); Type: FUNCTION; Schema: public; Owner: root
 --
 
@@ -215,7 +217,24 @@ $$;
 ALTER FUNCTION public.set_updated_at() OWNER TO root;
 
 --
--- TOC entry 347 (class 1255 OID 19519)
+-- TOC entry 349 (class 1255 OID 19583)
+-- Name: touch_admin_access_updated_at(); Type: FUNCTION; Schema: public; Owner: root
+--
+
+CREATE FUNCTION public.touch_admin_access_updated_at() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.touch_admin_access_updated_at() OWNER TO root;
+
+--
+-- TOC entry 348 (class 1255 OID 19519)
 -- Name: update_combo_details(); Type: FUNCTION; Schema: public; Owner: root
 --
 
@@ -250,7 +269,7 @@ CREATE FUNCTION public.update_combo_details() RETURNS trigger
 ALTER FUNCTION public.update_combo_details() OWNER TO root;
 
 --
--- TOC entry 346 (class 1255 OID 19321)
+-- TOC entry 347 (class 1255 OID 19321)
 -- Name: validate_combo_attractions(); Type: FUNCTION; Schema: public; Owner: root
 --
 
@@ -317,6 +336,23 @@ ALTER TABLE public.addons ALTER COLUMN addon_id ADD GENERATED ALWAYS AS IDENTITY
     CACHE 1
 );
 
+
+--
+-- TOC entry 288 (class 1259 OID 19563)
+-- Name: admin_access; Type: TABLE; Schema: public; Owner: root
+--
+
+CREATE TABLE public.admin_access (
+    user_id bigint NOT NULL,
+    resource_type text NOT NULL,
+    resource_id bigint NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT admin_access_resource_type_check CHECK ((resource_type = ANY (ARRAY['attraction'::text, 'combo'::text, 'banner'::text, 'page'::text, 'blog'::text, 'gallery'::text])))
+);
+
+
+ALTER TABLE public.admin_access OWNER TO root;
 
 --
 -- TOC entry 271 (class 1259 OID 19193)
@@ -447,6 +483,7 @@ CREATE TABLE public.attractions (
     slot_capacity integer DEFAULT 0 NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    desktop_image_url character varying(255),
     CONSTRAINT attractions_base_price_check CHECK ((base_price >= (0)::numeric)),
     CONSTRAINT attractions_discount_percent_check CHECK (((discount_percent >= (0)::numeric) AND (discount_percent <= (100)::numeric))),
     CONSTRAINT attractions_price_per_hour_check CHECK ((price_per_hour >= (0)::numeric)),
@@ -945,6 +982,7 @@ CREATE TABLE public.combos (
     total_price numeric(10,2) DEFAULT 0,
     image_url character varying(255),
     create_slots boolean DEFAULT true,
+    desktop_image_url character varying(255),
     CONSTRAINT chk_min_attractions CHECK (((array_length(attraction_ids, 1) IS NULL) OR (array_length(attraction_ids, 1) >= 2))),
     CONSTRAINT combos_combo_price_check CHECK ((combo_price >= (0)::numeric)),
     CONSTRAINT combos_discount_percent_check CHECK (((discount_percent >= (0)::numeric) AND (discount_percent <= (100)::numeric))),
@@ -955,7 +993,7 @@ CREATE TABLE public.combos (
 ALTER TABLE public.combos OWNER TO root;
 
 --
--- TOC entry 288 (class 1259 OID 19514)
+-- TOC entry 289 (class 1259 OID 19586)
 -- Name: combo_details; Type: VIEW; Schema: public; Owner: root
 --
 
@@ -966,6 +1004,7 @@ CREATE VIEW public.combo_details AS
     c.attraction_prices,
     c.total_price,
     c.image_url,
+    c.desktop_image_url,
     c.discount_percent,
     c.active,
     c.create_slots,
@@ -974,11 +1013,11 @@ CREATE VIEW public.combo_details AS
     c.attraction_1_id,
     c.attraction_2_id,
     c.combo_price,
-    COALESCE(json_agg(json_build_object('attraction_id', ca.attraction_id, 'title', a.title, 'price', ca.attraction_price, 'image_url', a.image_url, 'slug', a.slug, 'position_in_combo', ca.position_in_combo)) FILTER (WHERE (ca.attraction_id IS NOT NULL)), '[]'::json) AS attractions
+    COALESCE(json_agg(json_build_object('attraction_id', ca.attraction_id, 'title', a.title, 'price', ca.attraction_price, 'image_url', a.image_url, 'desktop_image_url', a.desktop_image_url, 'slug', a.slug, 'position_in_combo', ca.position_in_combo)) FILTER (WHERE (ca.attraction_id IS NOT NULL)), '[]'::json) AS attractions
    FROM ((public.combos c
      LEFT JOIN public.combo_attractions ca ON ((c.combo_id = ca.combo_id)))
      LEFT JOIN public.attractions a ON ((ca.attraction_id = a.attraction_id)))
-  GROUP BY c.combo_id, c.name, c.attraction_ids, c.attraction_prices, c.total_price, c.image_url, c.discount_percent, c.active, c.create_slots, c.created_at, c.updated_at, c.attraction_1_id, c.attraction_2_id, c.combo_price;
+  GROUP BY c.combo_id, c.name, c.attraction_ids, c.attraction_prices, c.total_price, c.image_url, c.desktop_image_url, c.discount_percent, c.active, c.create_slots, c.created_at, c.updated_at, c.attraction_1_id, c.attraction_2_id, c.combo_price;
 
 
 ALTER VIEW public.combo_details OWNER TO root;
@@ -1273,6 +1312,12 @@ CREATE TABLE public.offer_rules (
     priority integer DEFAULT 100 NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    day_type character varying(20) DEFAULT NULL::character varying,
+    specific_days integer[],
+    is_holiday boolean DEFAULT false,
+    specific_date date,
+    specific_time time without time zone,
+    CONSTRAINT offer_rules_day_type_check CHECK (((day_type IS NULL) OR ((day_type)::text = ANY ((ARRAY['weekday'::character varying, 'weekend'::character varying, 'holiday'::character varying, 'custom'::character varying])::text[])))),
     CONSTRAINT offer_rules_rule_discount_type_check CHECK (((rule_discount_type)::text = ANY ((ARRAY['percent'::character varying, 'amount'::character varying])::text[]))),
     CONSTRAINT offer_rules_slot_type_check CHECK (((slot_type)::text = ANY ((ARRAY['attraction'::character varying, 'combo'::character varying])::text[]))),
     CONSTRAINT offer_rules_target_required CHECK ((applies_to_all OR (target_id IS NOT NULL))),
@@ -1281,6 +1326,51 @@ CREATE TABLE public.offer_rules (
 
 
 ALTER TABLE public.offer_rules OWNER TO root;
+
+--
+-- TOC entry 4196 (class 0 OID 0)
+-- Dependencies: 245
+-- Name: COLUMN offer_rules.day_type; Type: COMMENT; Schema: public; Owner: root
+--
+
+COMMENT ON COLUMN public.offer_rules.day_type IS 'Type of day pricing: weekday, weekend, holiday, or custom';
+
+
+--
+-- TOC entry 4197 (class 0 OID 0)
+-- Dependencies: 245
+-- Name: COLUMN offer_rules.specific_days; Type: COMMENT; Schema: public; Owner: root
+--
+
+COMMENT ON COLUMN public.offer_rules.specific_days IS 'Array of day numbers (0=Sunday, 1=Monday, etc.) for custom day selection';
+
+
+--
+-- TOC entry 4198 (class 0 OID 0)
+-- Dependencies: 245
+-- Name: COLUMN offer_rules.is_holiday; Type: COMMENT; Schema: public; Owner: root
+--
+
+COMMENT ON COLUMN public.offer_rules.is_holiday IS 'Flag to indicate if this rule applies to holidays only';
+
+
+--
+-- TOC entry 4199 (class 0 OID 0)
+-- Dependencies: 245
+-- Name: COLUMN offer_rules.specific_date; Type: COMMENT; Schema: public; Owner: root
+--
+
+COMMENT ON COLUMN public.offer_rules.specific_date IS 'Specific date for date-slot pricing (YYYY-MM-DD)';
+
+
+--
+-- TOC entry 4200 (class 0 OID 0)
+-- Dependencies: 245
+-- Name: COLUMN offer_rules.specific_time; Type: COMMENT; Schema: public; Owner: root
+--
+
+COMMENT ON COLUMN public.offer_rules.specific_time IS 'Specific time for date-slot pricing (HH:MM:SS)';
+
 
 --
 -- TOC entry 244 (class 1259 OID 18765)
@@ -1299,7 +1389,7 @@ CREATE SEQUENCE public.offer_rules_rule_id_seq
 ALTER SEQUENCE public.offer_rules_rule_id_seq OWNER TO root;
 
 --
--- TOC entry 4179 (class 0 OID 0)
+-- TOC entry 4201 (class 0 OID 0)
 -- Dependencies: 244
 -- Name: offer_rules_rule_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: root
 --
@@ -1622,7 +1712,7 @@ ALTER TABLE public.users ALTER COLUMN user_id ADD GENERATED ALWAYS AS IDENTITY (
 
 
 --
--- TOC entry 3555 (class 2604 OID 18769)
+-- TOC entry 3560 (class 2604 OID 18769)
 -- Name: offer_rules rule_id; Type: DEFAULT; Schema: public; Owner: root
 --
 
@@ -1630,17 +1720,32 @@ ALTER TABLE ONLY public.offer_rules ALTER COLUMN rule_id SET DEFAULT nextval('pu
 
 
 --
--- TOC entry 4076 (class 0 OID 18727)
+-- TOC entry 4092 (class 0 OID 18727)
 -- Dependencies: 241
 -- Data for Name: addons; Type: TABLE DATA; Schema: public; Owner: root
 --
 
 COPY public.addons (addon_id, title, description, price, discount_percent, image_url, active, created_at, updated_at) FROM stdin;
+1	Camera/Devices		50.00	0.00	/uploads/2025/12/03/1764757912237_m8xkaa2r9t.png	t	2025-12-03 10:31:58.164546+00	2025-12-03 10:31:58.164546+00
+2	Food Voucher	Delicious food 	200.00	0.00	/uploads/2025/12/11/1765458837679_uy711qwxvq.jpg	t	2025-12-11 13:14:30.265594+00	2025-12-11 13:14:30.265594+00
+3	Food Voucher	Family Pack	500.00	0.00	/uploads/2025/12/11/1765458890871_3sox0q3aaqg.jpg	t	2025-12-11 13:15:08.025406+00	2025-12-11 13:15:08.025406+00
 \.
 
 
 --
--- TOC entry 4106 (class 0 OID 19193)
+-- TOC entry 4139 (class 0 OID 19563)
+-- Dependencies: 288
+-- Data for Name: admin_access; Type: TABLE DATA; Schema: public; Owner: root
+--
+
+COPY public.admin_access (user_id, resource_type, resource_id, created_at, updated_at) FROM stdin;
+11	attraction	1	2025-12-09 08:00:53.306238+00	2025-12-09 08:00:53.306238+00
+11	combo	1	2025-12-09 08:00:53.306238+00	2025-12-09 08:00:53.306238+00
+\.
+
+
+--
+-- TOC entry 4122 (class 0 OID 19193)
 -- Dependencies: 271
 -- Data for Name: analytics; Type: TABLE DATA; Schema: public; Owner: root
 --
@@ -1650,7 +1755,7 @@ COPY public.analytics (analytics_id, attraction_id, total_bookings, total_people
 
 
 --
--- TOC entry 4110 (class 0 OID 19242)
+-- TOC entry 4126 (class 0 OID 19242)
 -- Dependencies: 275
 -- Data for Name: api_logs; Type: TABLE DATA; Schema: public; Owner: root
 --
@@ -1660,7 +1765,7 @@ COPY public.api_logs (log_id, endpoint, payload, response_code, status, created_
 
 
 --
--- TOC entry 4070 (class 0 OID 18609)
+-- TOC entry 4086 (class 0 OID 18609)
 -- Dependencies: 235
 -- Data for Name: attraction_slots; Type: TABLE DATA; Schema: public; Owner: root
 --
@@ -2580,53 +2685,56 @@ COPY public.attraction_slots (slot_id, attraction_id, slot_code, start_date, end
 
 
 --
--- TOC entry 4068 (class 0 OID 18579)
+-- TOC entry 4084 (class 0 OID 18579)
 -- Dependencies: 233
 -- Data for Name: attractions; Type: TABLE DATA; Schema: public; Owner: root
 --
 
-COPY public.attractions (attraction_id, title, slug, description, image_url, gallery, base_price, price_per_hour, discount_percent, active, badge, video_url, slot_capacity, created_at, updated_at) FROM stdin;
-1	SnowCity	\N	let's play with snow	/uploads/2025/11/28/1764329786776_l5r8udk5ben.webp	[]	750.00	0.00	0.00	t	\N	\N	0	2025-11-28 11:36:57.932298+00	2025-11-28 11:36:57.932298+00
-2	Madlabs	\N		/uploads/2025/11/28/1764329840112_2h2eyuv0ru9.webp	[]	500.00	0.00	0.00	t	\N	\N	0	2025-11-28 11:37:37.391607+00	2025-11-29 07:17:19.991343+00
-3	 EYELUSION	\N		/uploads/2025/11/29/1764419208424_grw9o5ppifk.webp	[]	300.00	0.00	0.00	t	\N	\N	0	2025-11-29 12:26:53.30389+00	2025-11-29 12:26:53.30389+00
+COPY public.attractions (attraction_id, title, slug, description, image_url, gallery, base_price, price_per_hour, discount_percent, active, badge, video_url, slot_capacity, created_at, updated_at, desktop_image_url) FROM stdin;
+2	Madlabs	\N	Dive into a world of creativity, exploration, and excitement! Discover hands-on activities, mind-bending puzzles, and unforgettable experiments in a space designed to ignite joy and curiosity for all ages.\n\n\n🎟️ Entry Price: Rs. 500/person\n📏 Full ticket applicable for everyone above 2.5 feet height	/uploads/2025/11/28/1764329840112_2h2eyuv0ru9.webp	[]	500.00	0.00	0.00	t	\N	\N	0	2025-11-28 11:37:37.391607+00	2025-12-10 11:19:58.315934+00	/uploads/2025/12/10/1765365566638_65a7lhbqrll.webp
+3	 EYELUSION	\N	EYELUSION\nExplore some amazing, unique visual illusions, perfect for the entire family. Eyelusion brings illusions and AR experiences. Take picture of yourself, your friend and family at the most instagramable place in Bangalore.\n\nEntry Price: ₹300/person on all days.	/uploads/2025/11/29/1764419208424_grw9o5ppifk.webp	[]	300.00	0.00	0.00	t	\N	\N	0	2025-11-29 12:26:53.30389+00	2025-12-10 11:21:10.961172+00	/uploads/2025/12/10/1765365631993_t2qfy8fhu2g.webp
+1	SnowCity	\N	Snow City hosts various activities for you to engage in such as zorbing, basketball, dancing, snow rafting, snow mountain climbing, snowballing, fantasy snow castle making, and much more.\nWeekdays @ ₹650/- Weekends, Holidays/Festivals @ ₹750/-\nHappy Hours – First 3 Slots(10AM-11AM, 11AM-12PM or 12PM to 1PM) @ ₹500/- only on all Weekdays (Valid only on 1 day prior online booking)\nWinterful Wednesdays Offer – Now book any slot on Wednesdays at ₹500/-(Valid only on 1 day prior online booking)\nHappy hours offer is not applicable on Weekends/National Holidays/Festivals\nSocks are mandatory. Carry along or purchase from a counter available inside Snow world reception.\nCamera/Mobile Charges: 50/-\nJackets, gloves and snow boots will be provided free of cost, on a returnable basis.	/uploads/2025/11/28/1764329786776_l5r8udk5ben.webp	[]	750.00	0.00	0.00	t	\N	\N	0	2025-11-28 11:36:57.932298+00	2025-12-10 11:24:05.982127+00	/uploads/2025/12/10/1765365844624_7qwrli5hn2p.webp
 \.
 
 
 --
--- TOC entry 4088 (class 0 OID 18871)
+-- TOC entry 4104 (class 0 OID 18871)
 -- Dependencies: 253
 -- Data for Name: banners; Type: TABLE DATA; Schema: public; Owner: root
 --
 
 COPY public.banners (banner_id, web_image, mobile_image, title, description, linked_attraction_id, linked_offer_id, active, created_at, updated_at) FROM stdin;
-1	/uploads/2025/11/28/1764329570056_b0gry0yr36e.webp	/uploads/2025/11/28/1764329582310_zlgsjgysexa.webp			\N	\N	t	2025-11-28 11:33:07.899853+00	2025-11-28 11:33:07.899853+00
-2	/uploads/2025/11/28/1764329610307_znjg1r8ngh.png	/uploads/2025/11/28/1764329618769_a218uo0rtok.png			\N	\N	t	2025-11-28 11:33:40.69654+00	2025-11-28 11:33:40.69654+00
-3	/uploads/2025/11/28/1764329641502_8xjox2ng028.webp	/uploads/2025/11/28/1764329642524_ee4nsdl1i35.webp			\N	\N	t	2025-11-28 11:34:03.65189+00	2025-11-28 11:34:03.65189+00
+1	/uploads/2025/11/28/1764329570056_b0gry0yr36e.webp	/uploads/2025/11/28/1764329582310_zlgsjgysexa.webp			1	\N	t	2025-11-28 11:33:07.899853+00	2025-12-12 04:53:27.655186+00
+2	/uploads/2025/11/28/1764329610307_znjg1r8ngh.png	/uploads/2025/11/28/1764329618769_a218uo0rtok.png			2	\N	t	2025-11-28 11:33:40.69654+00	2025-12-12 04:53:40.075714+00
+3	/uploads/2025/11/28/1764329641502_8xjox2ng028.webp	/uploads/2025/11/28/1764329642524_ee4nsdl1i35.webp			3	\N	t	2025-11-28 11:34:03.65189+00	2025-12-12 04:53:49.093272+00
 \.
 
 
 --
--- TOC entry 4084 (class 0 OID 18823)
+-- TOC entry 4100 (class 0 OID 18823)
 -- Dependencies: 249
 -- Data for Name: blogs; Type: TABLE DATA; Schema: public; Owner: root
 --
 
 COPY public.blogs (blog_id, title, slug, content, image_url, author, meta_title, meta_description, meta_keywords, editor_mode, raw_html, raw_css, raw_js, section_type, section_ref_id, gallery, active, created_at, updated_at) FROM stdin;
+1	Snowcity 	User-Blog	<h2><strong style="color: rgb(13, 13, 13); background-color: rgb(255, 255, 255);"><img src="/uploads/2025/12/11/1765457901772_asaivm585x.webp">Busting the Myths About Family Fun</strong></h2><p><span style="color: rgb(13, 13, 13); background-color: rgb(255, 255, 255);">You’ve seen them – those flawless Instagram families at Wonderla, smiling through matching hats and ice creams. “Our weekend kids outing Bangalore was magical,” the caption beams. Then reality hits: you’ve got exhausted kids, a tight budget, and no idea how to make the weekend fun without chaos.</span></p><p><span style="color: rgb(13, 13, 13); background-color: rgb(255, 255, 255);">Here’s the truth: most of what parents believe about </span><strong style="color: rgb(13, 13, 13); background-color: rgb(255, 255, 255);">activities for kids in Bangalore</strong><span style="color: rgb(13, 13, 13); background-color: rgb(255, 255, 255);"> is completely backward. And it’s keeping families stuck in a cycle of stress, guilt, and unrealistic expectations.</span></p><p><span style="color: rgb(13, 13, 13); background-color: rgb(255, 255, 255);">We’re going to bust five myths about what makes a great </span><strong style="color: rgb(13, 13, 13); background-color: rgb(255, 255, 255);">weekend kids outing Bangalore</strong><span style="color: rgb(13, 13, 13); background-color: rgb(255, 255, 255);">, using real experiences and honest advice. By the end, you’ll see that the perfect outing isn’t expensive, Instagram-perfect, or far away – it’s the one that matches your family’s real rhythm.</span></p>	/uploads/2025/12/11/1765457894269_vy5vhv1gsj.webp	\N	\N	\N	\N	rich	\N	\N	\N	none	\N	[]	t	2025-12-11 12:58:02.021892+00	2025-12-11 12:58:38.024132+00
 \.
 
 
 --
--- TOC entry 4094 (class 0 OID 19011)
+-- TOC entry 4110 (class 0 OID 19011)
 -- Dependencies: 259
 -- Data for Name: booking_addons; Type: TABLE DATA; Schema: public; Owner: root
 --
 
 COPY public.booking_addons (id, booking_id, addon_id, quantity, price, created_at, updated_at) FROM stdin;
+6	141	1	1	50.00	2025-12-10 12:46:48.442061+00	2025-12-10 12:46:48.442061+00
+11	163	2	1	200.00	2025-12-11 13:52:16.789803+00	2025-12-11 13:52:16.789803+00
 \.
 
 
 --
--- TOC entry 4118 (class 0 OID 19331)
+-- TOC entry 4134 (class 0 OID 19331)
 -- Dependencies: 283
 -- Data for Name: booking_history; Type: TABLE DATA; Schema: public; Owner: root
 --
@@ -2636,7 +2744,7 @@ COPY public.booking_history (history_id, booking_id, old_status, new_status, pay
 
 
 --
--- TOC entry 4092 (class 0 OID 18925)
+-- TOC entry 4108 (class 0 OID 18925)
 -- Dependencies: 257
 -- Data for Name: bookings; Type: TABLE DATA; Schema: public; Owner: root
 --
@@ -2647,6 +2755,20 @@ COPY public.bookings (booking_id, booking_ref, order_id, user_id, item_type, att
 7	SC2025112900000007	6	3	Combo	\N	1	\N	\N	\N	\N	2	2025-11-29	08:10:19.409271	1700.00	0.00	Completed	Online	R64d5052b-7e3e-444f-bfe7-e092591a729b	Booked	/uploads/tickets/2025/11/29/ORDER_ORD20251129829cf6.pdf	f	f	2025-11-29 08:10:19.409271+00	2025-11-29 09:36:55.943041+00	\N	2025-11-29 08:10:19.409271+00	\N	\N	\N	\N	08:00:00	09:00:00	8:00 AM - 9:00 AM
 2	SC2025112800000002	2	3	Attraction	2	\N	\N	\N	\N	\N	2	2025-11-28	13:06:02.81135	1000.00	0.00	Completed	Online	R6337f7f1-5beb-44a4-be00-76531696bbcc	Booked	\N	f	f	2025-11-28 13:06:02.81135+00	2025-11-29 09:36:56.149609+00	\N	2025-11-28 13:06:02.81135+00	\N	\N	\N	\N	13:00:00	14:00:00	1:00 PM - 2:00 PM
 1	SC2025112800000001	1	3	Attraction	1	\N	\N	\N	\N	\N	2	2025-11-28	12:06:28.485718	1500.00	0.00	Completed	Online	R41c51923-6aa1-4a0a-8e1b-b30d12f94f3c	Booked	/uploads/tickets/2025/11/28/ORDER_ORD2025112895158f.pdf	f	f	2025-11-28 12:06:28.485718+00	2025-11-29 09:36:56.199775+00	\N	2025-11-28 12:06:28.485718+00	\N	\N	\N	\N	12:00:00	13:00:00	12:00 PM - 1:00 PM
+95	SC2025120400000095	45	3	Combo	\N	1	\N	\N	\N	\N	1	2025-12-04	07:26:13.940701	1200.00	0.00	Completed	Online	Rc5f07867-c30a-4c56-ae90-0bc23c3eb984	Booked	/uploads/tickets/2025/12/04/ORDER_ORD2025120480dfc7.pdf	f	f	2025-12-04 07:26:13.940701+00	2025-12-04 07:27:14.618392+00	\N	2025-12-04 07:26:13.940701+00	\N	\N	\N	\N	11:00:00	13:00:00	11:00 AM - 1:00 PM
+120	SC2025120800000120	66	3	Attraction	1	\N	\N	\N	3	\N	2	2025-12-08	06:06:34.586741	1500.00	500.00	Completed	Online	R2872ad07-81f1-4865-a78f-ecda3acf0e9f	Booked	/uploads/tickets/2025/12/08/ORDER_ORD2025120862d117.pdf	f	f	2025-12-08 06:06:34.586741+00	2025-12-08 06:10:24.355794+00	\N	2025-12-08 06:06:34.586741+00	\N	\N	\N	\N	12:00:00	13:00:00	12:00 PM - 1:00 PM
+87	SC2025120400000087	43	3	Attraction	3	\N	\N	\N	\N	86	1	2025-12-04	07:03:57.163655	350.00	0.00	Completed	Online	R7f819e1d-189d-4403-bbb1-2194f897087e	Booked	/uploads/tickets/2025/12/04/ORDER_ORD2025120430b00f.pdf	f	f	2025-12-04 07:03:57.163655+00	2025-12-04 07:04:52.524295+00	\N	2025-12-04 07:03:57.163655+00	\N	\N	\N	\N	14:00:00	14:40:00	2:00 PM - 2:40 PM
+88	SC2025120400000088	43	3	Attraction	2	\N	\N	\N	\N	86	1	2025-12-04	07:03:57.163655	350.00	0.00	Completed	Online	R7f819e1d-189d-4403-bbb1-2194f897087e	Booked	/uploads/tickets/2025/12/04/ORDER_ORD2025120430b00f.pdf	f	f	2025-12-04 07:03:57.163655+00	2025-12-04 07:04:52.524295+00	\N	2025-12-04 07:03:57.163655+00	\N	\N	\N	\N	14:40:00	15:20:00	2:40 PM - 3:20 PM
+89	SC2025120400000089	43	3	Attraction	1	\N	\N	\N	\N	86	1	2025-12-04	07:03:57.163655	500.00	0.00	Completed	Online	R7f819e1d-189d-4403-bbb1-2194f897087e	Booked	/uploads/tickets/2025/12/04/ORDER_ORD2025120430b00f.pdf	f	f	2025-12-04 07:03:57.163655+00	2025-12-04 07:04:52.524295+00	\N	2025-12-04 07:03:57.163655+00	\N	\N	\N	\N	15:20:00	16:00:00	3:20 PM - 4:00 PM
+90	SC2025120400000090	43	3	Attraction	1	\N	\N	\N	\N	\N	1	2025-12-04	07:03:57.163655	750.00	0.00	Completed	Online	R7f819e1d-189d-4403-bbb1-2194f897087e	Booked	/uploads/tickets/2025/12/04/ORDER_ORD2025120430b00f.pdf	f	f	2025-12-04 07:03:57.163655+00	2025-12-04 07:04:52.524295+00	\N	2025-12-04 07:03:57.163655+00	\N	\N	\N	\N	19:00:00	20:00:00	7:00 PM - 8:00 PM
+86	SC2025120400000086	43	3	Combo	\N	5	\N	\N	\N	\N	1	2025-12-04	07:03:57.163655	1200.00	0.00	Completed	Online	R7f819e1d-189d-4403-bbb1-2194f897087e	Booked	/uploads/tickets/2025/12/04/ORDER_ORD2025120430b00f.pdf	f	f	2025-12-04 07:03:57.163655+00	2025-12-04 07:04:52.565308+00	\N	2025-12-04 07:03:57.163655+00	\N	\N	\N	\N	14:00:00	16:00:00	2:00 PM - 4:00 PM
+147	SC2025121000000147	88	13	Attraction	3	\N	\N	\N	\N	\N	1	2025-12-11	16:40:53.477913	300.00	0.00	Completed	Online	R87e2e908-9951-4aa7-83f6-9bcc04112394	Booked	/uploads/tickets/2025/12/10/ORDER_ORD202512107d2c13.pdf	f	f	2025-12-10 16:40:53.477913+00	2025-12-10 16:42:10.778671+00	\N	2025-12-10 16:40:53.477913+00	\N	\N	\N	\N	13:00:00	14:00:00	1:00 PM - 2:00 PM
+123	SC2025120800000123	69	3	Attraction	2	\N	\N	\N	\N	\N	2	2025-12-08	11:12:44.371879	1000.00	0.00	Completed	Online	R5927ada8-a721-41fe-b901-7d5d7289ce0f	Booked	/uploads/tickets/2025/12/08/ORDER_ORD202512086b8052.pdf	f	f	2025-12-08 11:12:44.371879+00	2025-12-08 11:13:51.399294+00	\N	2025-12-08 11:12:44.371879+00	\N	\N	\N	\N	16:00:00	17:00:00	4:00 PM - 5:00 PM
+96	SC2025120400000096	45	3	Attraction	1	\N	\N	\N	\N	95	1	2025-12-04	07:26:13.940701	425.00	0.00	Completed	Online	Rc5f07867-c30a-4c56-ae90-0bc23c3eb984	Booked	/uploads/tickets/2025/12/04/ORDER_ORD2025120480dfc7.pdf	f	f	2025-12-04 07:26:13.940701+00	2025-12-04 07:27:14.556516+00	\N	2025-12-04 07:26:13.940701+00	\N	\N	\N	\N	11:00:00	12:00:00	11:00 AM - 12:00 PM
+97	SC2025120400000097	45	3	Attraction	2	\N	\N	\N	\N	95	1	2025-12-04	07:26:13.940701	425.00	0.00	Completed	Online	Rc5f07867-c30a-4c56-ae90-0bc23c3eb984	Booked	/uploads/tickets/2025/12/04/ORDER_ORD2025120480dfc7.pdf	f	f	2025-12-04 07:26:13.940701+00	2025-12-04 07:27:14.556516+00	\N	2025-12-04 07:26:13.940701+00	\N	\N	\N	\N	12:00:00	13:00:00	12:00 PM - 1:00 PM
+141	SC2025121000000141	85	12	Attraction	3	\N	\N	\N	\N	\N	1	2025-12-11	12:46:48.442061	350.00	0.00	Completed	Online	R378895d1-edcd-4e02-aba7-66e3f2861093	Booked	/uploads/tickets/2025/12/10/ORDER_ORD20251210bcb9b8.pdf	f	f	2025-12-10 12:46:48.442061+00	2025-12-10 12:50:19.260067+00	\N	2025-12-10 12:46:48.442061+00	\N	\N	\N	\N	10:00:00	11:00:00	10:00 AM - 11:00 AM
+142	SC2025121000000142	85	12	Attraction	2	\N	\N	\N	\N	\N	1	2025-12-11	12:46:48.442061	500.00	0.00	Completed	Online	R378895d1-edcd-4e02-aba7-66e3f2861093	Booked	/uploads/tickets/2025/12/10/ORDER_ORD20251210bcb9b8.pdf	f	f	2025-12-10 12:46:48.442061+00	2025-12-10 12:50:19.430958+00	\N	2025-12-10 12:46:48.442061+00	\N	\N	\N	\N	11:00:00	12:00:00	11:00 AM - 12:00 PM
+161	SC2025121100000161	102	3	Attraction	1	\N	\N	\N	\N	\N	2	2025-12-11	12:21:21.556329	1500.00	0.00	Completed	Online	R3dbcb72e-581b-4373-b700-2ad105b4d5d8	Booked	/uploads/tickets/2025/12/11/ORDER_ORD2025121196b7a5.pdf	f	f	2025-12-11 12:21:21.556329+00	2025-12-11 12:22:25.457129+00	\N	2025-12-11 12:21:21.556329+00	\N	\N	\N	\N	19:00:00	20:00:00	7:00 PM - 8:00 PM
 5	SC2025112900000005	4	3	Combo	\N	1	\N	\N	\N	\N	2	2025-11-29	07:56:26.021288	1700.00	0.00	Completed	Online	R8ac1c0a5-2040-410b-a8a6-17323c8996b4	Booked	/uploads/tickets/2025/11/29/ORDER_ORD20251129f3386c.pdf	f	f	2025-11-29 07:56:26.021288+00	2025-11-29 09:36:56.027144+00	\N	2025-11-29 07:56:26.021288+00	\N	\N	\N	\N	07:00:00	08:00:00	7:00 AM - 8:00 AM
 4	SC2025112900000004	3	3	Attraction	1	\N	\N	\N	\N	\N	2	2025-11-29	07:46:36.456974	1500.00	0.00	Completed	Online	R2e551bc8-365c-4837-b379-339822f069e6	Booked	/uploads/tickets/2025/11/29/ORDER_ORD20251129a806b7.pdf	f	f	2025-11-29 07:46:36.456974+00	2025-11-29 09:36:56.067344+00	\N	2025-11-29 07:46:36.456974+00	\N	\N	\N	\N	07:00:00	08:00:00	7:00 AM - 8:00 AM
 3	SC2025112900000003	3	3	Combo	\N	1	\N	\N	\N	\N	1	2025-11-29	07:46:36.456974	850.00	0.00	Completed	Online	R2e551bc8-365c-4837-b379-339822f069e6	Booked	/uploads/tickets/2025/11/29/ORDER_ORD20251129a806b7.pdf	f	f	2025-11-29 07:46:36.456974+00	2025-11-29 09:36:56.108472+00	\N	2025-11-29 07:46:36.456974+00	\N	\N	\N	\N	07:00:00	08:00:00	7:00 AM - 8:00 AM
@@ -2671,11 +2793,35 @@ COPY public.bookings (booking_id, booking_ref, order_id, user_id, item_type, att
 28	SC2025112900000028	22	3	Attraction	1	\N	\N	\N	\N	\N	2	2025-11-29	11:03:37.359682	1500.00	0.00	Completed	Online	R144f6b36-5a2f-4777-b481-e310e554bb1d	Booked	/uploads/tickets/2025/11/29/ORDER_ORD20251129544579.pdf	f	f	2025-11-29 11:03:37.359682+00	2025-11-29 11:04:47.743534+00	\N	2025-11-29 11:03:37.359682+00	\N	\N	\N	\N	13:00:00	14:00:00	1:00 PM - 2:00 PM
 29	SC2025112900000029	22	3	Attraction	2	\N	\N	\N	\N	\N	2	2025-11-29	11:03:37.359682	1000.00	0.00	Completed	Online	R144f6b36-5a2f-4777-b481-e310e554bb1d	Redeemed	/uploads/tickets/2025/11/29/ORDER_ORD20251129544579.pdf	f	f	2025-11-29 11:03:37.359682+00	2025-11-29 11:34:17.877723+00	\N	2025-11-29 11:03:37.359682+00	\N	\N	\N	\N	14:00:00	15:00:00	2:00 PM - 3:00 PM
 30	SC2025120300000030	23	3	Attraction	1	\N	\N	\N	\N	\N	2	2025-12-03	06:21:10.039028	1500.00	0.00	Completed	Online	R4d2a5dd9-1552-4ff9-8786-58707c1b137e	Booked	/uploads/tickets/2025/12/03/ORDER_ORD20251203fbb522.pdf	f	f	2025-12-03 06:21:10.039028+00	2025-12-03 06:22:08.750807+00	\N	2025-12-03 06:21:10.039028+00	\N	\N	\N	\N	10:00:00	11:00:00	10:00 AM - 11:00 AM
+31	SC2025120300000031	24	3	Combo	\N	1	\N	\N	\N	\N	2	2025-12-03	08:19:07.480882	1700.00	0.00	Completed	Online	R25cac27f-9e86-4b4b-82fe-ec4df19e18e5	Redeemed	/uploads/tickets/2025/12/03/ORDER_ORD202512037c41be.pdf	f	f	2025-12-03 08:19:07.480882+00	2025-12-03 09:20:42.194121+00	\N	2025-12-03 08:19:07.480882+00	\N	\N	\N	\N	11:00:00	13:00:00	11:00 AM - 1:00 PM
+138	SC2025121000000138	84	3	Attraction	3	\N	\N	\N	\N	\N	1	2025-12-10	12:22:51.180212	300.00	0.00	Completed	Online	Radfe099b-ae7a-4a18-8528-ecf7be9877a4	Booked	/uploads/tickets/2025/12/10/ORDER_ORD20251210510a12.pdf	f	f	2025-12-10 12:22:51.180212+00	2025-12-10 12:23:53.098833+00	\N	2025-12-10 12:22:51.180212+00	\N	\N	\N	\N	19:00:00	20:00:00	7:00 PM - 8:00 PM
+32	SC2025120300000032	24	3	Attraction	2	\N	\N	\N	\N	\N	2	2025-12-03	08:19:07.480882	1000.00	0.00	Completed	Online	R25cac27f-9e86-4b4b-82fe-ec4df19e18e5	Booked	/uploads/tickets/2025/12/03/ORDER_ORD202512037c41be.pdf	f	f	2025-12-03 08:19:07.480882+00	2025-12-03 08:20:01.055328+00	\N	2025-12-03 08:19:07.480882+00	\N	\N	\N	\N	19:00:00	20:00:00	7:00 PM - 8:00 PM
+93	SC2025120400000093	44	3	Attraction	2	\N	\N	\N	\N	91	2	2025-12-04	07:11:28.263998	700.00	0.00	Completed	Online	Rcb993b74-9dd3-4b77-b20c-1130e9208b00	Booked	/uploads/tickets/2025/12/04/ORDER_ORD202512046bebbd.pdf	f	f	2025-12-04 07:11:28.263998+00	2025-12-04 07:12:21.585593+00	\N	2025-12-04 07:11:28.263998+00	\N	\N	\N	\N	12:40:00	13:20:00	12:40 PM - 1:20 PM
+121	SC2025120800000121	67	3	Attraction	1	\N	\N	\N	3	\N	2	2025-12-08	10:48:05.657593	1500.00	500.00	Completed	Online	Rb494834c-6f18-402d-9fa6-b3907749ede9	Booked	/uploads/tickets/2025/12/08/ORDER_ORD20251208b3501e.pdf	f	f	2025-12-08 10:48:05.657593+00	2025-12-08 10:55:52.571371+00	\N	2025-12-08 10:48:05.657593+00	\N	\N	\N	\N	14:00:00	15:00:00	2:00 PM - 3:00 PM
+124	SC2025120800000124	70	3	Attraction	3	\N	\N	\N	\N	\N	2	2025-12-08	11:24:33.476769	600.00	0.00	Completed	Online	Ra4a31440-e804-46f7-8f29-afed209ee1f2	Booked	/uploads/tickets/2025/12/08/ORDER_ORD20251208f089f9.pdf	f	f	2025-12-08 11:24:33.476769+00	2025-12-08 11:25:45.136206+00	\N	2025-12-08 11:24:33.476769+00	\N	\N	\N	\N	14:00:00	15:00:00	2:00 PM - 3:00 PM
+98	SC2025120400000098	46	3	Attraction	3	\N	\N	\N	\N	\N	2	2025-12-04	12:39:09.292527	600.00	0.00	Completed	Online	Re960e004-1525-4a91-8d00-d02802d9ad90	Redeemed	/uploads/tickets/2025/12/04/ORDER_ORD20251204dfe9c0.pdf	f	f	2025-12-04 12:39:09.292527+00	2025-12-04 12:40:44.339171+00	\N	2025-12-04 12:39:09.292527+00	\N	\N	\N	\N	11:00:00	12:00:00	11:00 AM - 12:00 PM
+94	SC2025120400000094	44	3	Attraction	1	\N	\N	\N	\N	91	2	2025-12-04	07:11:28.263998	1000.00	0.00	Completed	Online	Rcb993b74-9dd3-4b77-b20c-1130e9208b00	Booked	/uploads/tickets/2025/12/04/ORDER_ORD202512046bebbd.pdf	f	f	2025-12-04 07:11:28.263998+00	2025-12-04 07:12:21.539215+00	\N	2025-12-04 07:11:28.263998+00	\N	\N	\N	\N	13:20:00	14:00:00	1:20 PM - 2:00 PM
+135	SC2025120900000135	81	3	Attraction	1	\N	\N	\N	3	\N	2	2025-12-10	11:53:38.651133	1500.00	500.00	Completed	Online	Rb6f3e34d-4ffe-408a-a070-1889aebe2adc	Booked	/uploads/tickets/2025/12/09/ORDER_ORD202512091508f9.pdf	f	f	2025-12-09 11:53:38.651133+00	2025-12-09 11:54:33.044863+00	\N	2025-12-09 11:53:38.651133+00	\N	\N	\N	\N	13:00:00	14:00:00	1:00 PM - 2:00 PM
+139	SC2025121000000139	84	3	Attraction	3	\N	\N	\N	\N	\N	1	2025-12-10	12:22:51.180212	300.00	0.00	Completed	Online	Radfe099b-ae7a-4a18-8528-ecf7be9877a4	Booked	/uploads/tickets/2025/12/10/ORDER_ORD20251210510a12.pdf	f	f	2025-12-10 12:22:51.180212+00	2025-12-10 12:23:53.059008+00	\N	2025-12-10 12:22:51.180212+00	\N	\N	\N	\N	19:00:00	20:00:00	7:00 PM - 8:00 PM
+162	SC2025121100000162	103	13	Attraction	3	\N	\N	\N	\N	\N	1	2025-12-12	13:45:09.451133	300.00	0.00	Completed	Online	Ra1f1f2a5-aa2b-467b-99da-65a778b1c875	Booked	/uploads/tickets/2025/12/11/ORDER_ORD202512113f1c23.pdf	f	f	2025-12-11 13:45:09.451133+00	2025-12-11 13:46:17.517458+00	\N	2025-12-11 13:45:09.451133+00	\N	\N	\N	\N	13:00:00	14:00:00	1:00 PM - 2:00 PM
+122	SC2025120800000122	68	3	Attraction	1	\N	\N	\N	3	\N	2	2025-12-08	10:57:10.113981	1500.00	500.00	Completed	Online	R0d9079ea-710f-4b30-ab12-494babeabb94	Booked	/uploads/tickets/2025/12/08/ORDER_ORD202512089770a2.pdf	f	f	2025-12-08 10:57:10.113981+00	2025-12-08 10:58:09.150639+00	\N	2025-12-08 10:57:10.113981+00	\N	\N	\N	\N	16:00:00	17:00:00	4:00 PM - 5:00 PM
+160	SC2025121100000160	101	3	Attraction	2	\N	\N	\N	\N	\N	2	2025-12-11	12:15:26.368509	1000.00	0.00	Completed	Online	R8172fe11-a60e-40d0-8186-1987d81bf238	Booked	/uploads/tickets/2025/12/11/ORDER_ORD20251211e6e04e.pdf	f	f	2025-12-11 12:15:26.368509+00	2025-12-11 12:16:25.133101+00	\N	2025-12-11 12:15:26.368509+00	\N	\N	\N	\N	19:00:00	20:00:00	7:00 PM - 8:00 PM
+136	SC2025121000000136	82	3	Attraction	3	\N	\N	\N	\N	\N	1	2025-12-10	10:50:27.571294	300.00	0.00	Completed	Online	R4fe97eb3-87f6-4372-970d-74d23e378eb8	Booked	/uploads/tickets/2025/12/10/ORDER_ORD20251210e6fb66.pdf	f	f	2025-12-10 10:50:27.571294+00	2025-12-10 10:51:24.333667+00	\N	2025-12-10 10:50:27.571294+00	\N	\N	\N	\N	10:00:00	11:00:00	10:00 AM - 11:00 AM
+140	SC2025121000000140	84	3	Attraction	2	\N	\N	\N	\N	\N	2	2025-12-10	12:22:51.180212	1000.00	0.00	Completed	Online	Radfe099b-ae7a-4a18-8528-ecf7be9877a4	Booked	/uploads/tickets/2025/12/10/ORDER_ORD20251210510a12.pdf	f	f	2025-12-10 12:22:51.180212+00	2025-12-10 12:23:53.059008+00	\N	2025-12-10 12:22:51.180212+00	\N	\N	\N	\N	19:00:00	20:00:00	7:00 PM - 8:00 PM
+91	SC2025120400000091	44	3	Combo	\N	5	\N	\N	\N	\N	2	2025-12-04	07:11:28.263998	2400.00	0.00	Completed	Online	Rcb993b74-9dd3-4b77-b20c-1130e9208b00	Booked	/uploads/tickets/2025/12/04/ORDER_ORD202512046bebbd.pdf	f	f	2025-12-04 07:11:28.263998+00	2025-12-04 07:12:21.539215+00	\N	2025-12-04 07:11:28.263998+00	\N	\N	\N	\N	12:00:00	14:00:00	12:00 PM - 2:00 PM
+92	SC2025120400000092	44	3	Attraction	3	\N	\N	\N	\N	91	2	2025-12-04	07:11:28.263998	700.00	0.00	Completed	Online	Rcb993b74-9dd3-4b77-b20c-1130e9208b00	Booked	/uploads/tickets/2025/12/04/ORDER_ORD202512046bebbd.pdf	f	f	2025-12-04 07:11:28.263998+00	2025-12-04 07:12:21.539215+00	\N	2025-12-04 07:11:28.263998+00	\N	\N	\N	\N	12:00:00	12:40:00	12:00 PM - 12:40 PM
+83	SC2025120400000083	42	3	Attraction	3	\N	\N	\N	\N	82	2	2025-12-04	06:48:34.440513	700.00	0.00	Completed	Online	R1706d820-0c9d-491b-be11-5b0e08c3e652	Booked	/uploads/tickets/2025/12/04/ORDER_ORD20251204cd6417.pdf	f	f	2025-12-04 06:48:34.440513+00	2025-12-04 06:49:36.277356+00	\N	2025-12-04 06:48:34.440513+00	\N	\N	\N	\N	10:00:00	10:40:00	10:00 AM - 10:40 AM
+84	SC2025120400000084	42	3	Attraction	2	\N	\N	\N	\N	82	2	2025-12-04	06:48:34.440513	700.00	0.00	Completed	Online	R1706d820-0c9d-491b-be11-5b0e08c3e652	Booked	/uploads/tickets/2025/12/04/ORDER_ORD20251204cd6417.pdf	f	f	2025-12-04 06:48:34.440513+00	2025-12-04 06:49:36.277356+00	\N	2025-12-04 06:48:34.440513+00	\N	\N	\N	\N	10:40:00	11:20:00	10:40 AM - 11:20 AM
+85	SC2025120400000085	42	3	Attraction	1	\N	\N	\N	\N	82	2	2025-12-04	06:48:34.440513	1000.00	0.00	Completed	Online	R1706d820-0c9d-491b-be11-5b0e08c3e652	Booked	/uploads/tickets/2025/12/04/ORDER_ORD20251204cd6417.pdf	f	f	2025-12-04 06:48:34.440513+00	2025-12-04 06:49:36.277356+00	\N	2025-12-04 06:48:34.440513+00	\N	\N	\N	\N	11:20:00	12:00:00	11:20 AM - 12:00 PM
+82	SC2025120400000082	42	3	Combo	\N	5	\N	\N	\N	\N	2	2025-12-04	06:48:34.440513	2400.00	0.00	Completed	Online	R1706d820-0c9d-491b-be11-5b0e08c3e652	Booked	/uploads/tickets/2025/12/04/ORDER_ORD20251204cd6417.pdf	f	f	2025-12-04 06:48:34.440513+00	2025-12-04 06:49:36.322929+00	\N	2025-12-04 06:48:34.440513+00	\N	\N	\N	\N	10:00:00	12:00:00	10:00 AM - 12:00 PM
+145	SC2025121000000145	87	3	Attraction	3	\N	\N	\N	\N	\N	2	2025-12-11	14:04:07.515893	600.00	0.00	Completed	Online	R139bb897-dee8-4950-94a2-1987c79464d6	Booked	/uploads/tickets/2025/12/10/ORDER_ORD20251210a499b6.pdf	f	f	2025-12-10 14:04:07.515893+00	2025-12-10 14:07:14.660611+00	\N	2025-12-10 14:04:07.515893+00	\N	\N	\N	\N	14:00:00	15:00:00	2:00 PM - 3:00 PM
+146	SC2025121000000146	87	3	Attraction	2	\N	\N	\N	\N	\N	2	2025-12-11	14:04:07.515893	1000.00	0.00	Completed	Online	R139bb897-dee8-4950-94a2-1987c79464d6	Booked	/uploads/tickets/2025/12/10/ORDER_ORD20251210a499b6.pdf	f	f	2025-12-10 14:04:07.515893+00	2025-12-10 14:07:14.864382+00	\N	2025-12-10 14:04:07.515893+00	\N	\N	\N	\N	14:00:00	15:00:00	2:00 PM - 3:00 PM
+163	SC2025121100000163	104	3	Attraction	3	\N	\N	\N	\N	\N	2	2025-12-12	13:52:16.789803	800.00	0.00	Completed	Online	R92da1b71-15db-42b7-9842-9fec6b980c82	Booked	/uploads/tickets/2025/12/11/ORDER_ORD202512118fbe53.pdf	f	f	2025-12-11 13:52:16.789803+00	2025-12-11 13:53:35.017071+00	\N	2025-12-11 13:52:16.789803+00	\N	\N	\N	\N	15:00:00	16:00:00	3:00 PM - 4:00 PM
 \.
 
 
 --
--- TOC entry 4100 (class 0 OID 19122)
+-- TOC entry 4116 (class 0 OID 19122)
 -- Dependencies: 265
 -- Data for Name: cart_bookings; Type: TABLE DATA; Schema: public; Owner: root
 --
@@ -2685,7 +2831,7 @@ COPY public.cart_bookings (id, cart_id, booking_id, created_at) FROM stdin;
 
 
 --
--- TOC entry 4098 (class 0 OID 19077)
+-- TOC entry 4114 (class 0 OID 19077)
 -- Dependencies: 263
 -- Data for Name: cart_items; Type: TABLE DATA; Schema: public; Owner: root
 --
@@ -2695,7 +2841,7 @@ COPY public.cart_items (cart_item_id, cart_id, item_type, attraction_id, combo_i
 
 
 --
--- TOC entry 4096 (class 0 OID 19041)
+-- TOC entry 4112 (class 0 OID 19041)
 -- Dependencies: 261
 -- Data for Name: carts; Type: TABLE DATA; Schema: public; Owner: root
 --
@@ -2705,17 +2851,18 @@ COPY public.carts (cart_id, cart_ref, user_id, session_id, total_amount, discoun
 
 
 --
--- TOC entry 4082 (class 0 OID 18793)
+-- TOC entry 4098 (class 0 OID 18793)
 -- Dependencies: 247
 -- Data for Name: cms_pages; Type: TABLE DATA; Schema: public; Owner: root
 --
 
 COPY public.cms_pages (page_id, title, slug, content, meta_title, meta_description, meta_keywords, editor_mode, raw_html, raw_css, raw_js, nav_group, nav_order, placement, placement_ref_id, gallery, active, created_at, updated_at, section_type, section_ref_id) FROM stdin;
+1	Snowcity Location 	location		location	location,snowcity	\N	raw	<div id="snow-city-guide">\n\n  <h2>How to Reach Snow City</h2>\n  <p>Coordinates: <span id="coords">13.0057596, 77.5920609</span></p>\n\n  <div class="map">\n    <iframe\n      src="https://www.google.com/maps?q=13.0057596,77.5920609&z=17&output=embed"\n      loading="lazy">\n    </iframe>\n  </div>\n\n  <h3>Quick Links</h3>\n  <div class="btn-row">\n    <a id="open-directions" target="_blank">Get Directions</a>\n    <a id="open-maps" target="_blank">Open in Google Maps</a>\n    <button id="copy-coords">Copy Coordinates</button>\n  </div>\n\n  <h3>Distances</h3>\n  <ul>\n    <li>Cantonment Railway Station — <b>2 km</b></li>\n    <li>KSR Bangalore City Railway Station — <b>6 km</b></li>\n    <li>Kempegowda Airport — <b>31 km</b></li>\n    <li>Metro: <b>Cubbon Park (5 km)</b></li>\n    <li>Bus Stop: <b>Fun World Munyreddy Palya (150 m)</b></li>\n  </ul>\n\n  <h3>Travel Modes</h3>\n  <div class="btn-row">\n    <a id="drive-link" target="_blank">Driving</a>\n    <a id="transit-link" target="_blank">Transit</a>\n    <a id="walk-link" target="_blank">Walking</a>\n  </div>\n\n</div>\n	#snow-city-guide {\n  font-family: Arial, sans-serif;\n  max-width: 700px;\n  margin: auto;\n  padding: 20px;\n  background: #fff;\n}\n\n.map iframe {\n  width: 100%;\n  height: 270px;\n  border: 0;\n  border-radius: 10px;\n}\n\n.btn-row {\n  display: flex;\n  gap: 10px;\n  flex-wrap: wrap;\n  margin: 10px 0;\n}\n\n.btn-row a,\n.btn-row button {\n  background: #0b6efd;\n  color: #fff;\n  padding: 8px 14px;\n  text-decoration: none;\n  border-radius: 6px;\n  border: none;\n  cursor: pointer;\n  font-size: 14px;\n}\n\n.btn-row button {\n  background: #444;\n}\n\nul li {\n  margin-bottom: 6px;\n}\n	const lat = 13.0057596;\nconst lng = 77.5920609;\nconst dest = `${lat},${lng}`;\nconst encoded = encodeURIComponent(dest);\n\n// Set URLs\ndocument.getElementById("open-directions").href =\n  `https://www.google.com/maps/dir/?api=1&destination=${encoded}`;\n\ndocument.getElementById("open-maps").href =\n  `https://www.google.com/maps/search/?api=1&query=${encoded}`;\n\ndocument.getElementById("drive-link").href =\n  `https://www.google.com/maps/dir/?api=1&destination=${encoded}&travelmode=driving`;\n\ndocument.getElementById("transit-link").href =\n  `https://www.google.com/maps/dir/?api=1&destination=${encoded}&travelmode=transit`;\n\ndocument.getElementById("walk-link").href =\n  `https://www.google.com/maps/dir/?api=1&destination=${encoded}&travelmode=walking`;\n\n// Copy button\ndocument.getElementById("copy-coords").addEventListener("click", () => {\n  navigator.clipboard.writeText(dest);\n  alert("Coordinates copied!");\n});\n		0	none	\N	[]	t	2025-12-11 12:52:21.454465+00	2025-12-11 13:02:24.655753+00	none	\N
 \.
 
 
 --
--- TOC entry 4072 (class 0 OID 18666)
+-- TOC entry 4088 (class 0 OID 18666)
 -- Dependencies: 237
 -- Data for Name: combo_attractions; Type: TABLE DATA; Schema: public; Owner: root
 --
@@ -2728,13 +2875,16 @@ COPY public.combo_attractions (combo_attraction_id, combo_id, attraction_id, att
 23	4	1	500.00	1	2025-12-03 06:38:02.94619+00
 24	4	2	400.00	2	2025-12-03 06:38:02.94619+00
 25	4	3	300.00	3	2025-12-03 06:38:02.94619+00
-26	1	1	425.00	1	2025-12-03 06:38:19.99401+00
-27	1	2	425.00	2	2025-12-03 06:38:19.99401+00
+34	5	3	350.00	1	2025-12-10 11:23:03.995907+00
+35	5	2	350.00	2	2025-12-10 11:23:03.995907+00
+36	5	1	500.00	3	2025-12-10 11:23:03.995907+00
+37	1	1	425.00	1	2025-12-10 11:23:32.9591+00
+38	1	2	425.00	2	2025-12-10 11:23:32.9591+00
 \.
 
 
 --
--- TOC entry 4074 (class 0 OID 18695)
+-- TOC entry 4090 (class 0 OID 18695)
 -- Dependencies: 239
 -- Data for Name: combo_slots; Type: TABLE DATA; Schema: public; Owner: root
 --
@@ -3468,43 +3618,785 @@ COPY public.combo_slots (combo_slot_id, combo_id, combo_slot_code, start_date, e
 1681	4	4-2026-02-27-1500	2026-02-27	2026-02-27	15:00:00	18:00:00	300	0.00	t	2025-11-29 12:29:25.058897+00	2025-11-29 12:29:25.058897+00
 1682	4	4-2026-02-27-1600	2026-02-27	2026-02-27	16:00:00	19:00:00	300	0.00	t	2025-11-29 12:29:25.058897+00	2025-11-29 12:29:25.058897+00
 1683	4	4-2026-02-27-1700	2026-02-27	2026-02-27	17:00:00	20:00:00	300	0.00	t	2025-11-29 12:29:25.058897+00	2025-11-29 12:29:25.058897+00
+1684	5	5-2025-12-04-1000	2025-12-04	2025-12-04	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1685	5	5-2025-12-04-1100	2025-12-04	2025-12-04	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1686	5	5-2025-12-04-1200	2025-12-04	2025-12-04	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1687	5	5-2025-12-04-1300	2025-12-04	2025-12-04	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1688	5	5-2025-12-04-1400	2025-12-04	2025-12-04	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1689	5	5-2025-12-04-1500	2025-12-04	2025-12-04	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1690	5	5-2025-12-04-1600	2025-12-04	2025-12-04	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1691	5	5-2025-12-04-1700	2025-12-04	2025-12-04	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1692	5	5-2025-12-05-1000	2025-12-05	2025-12-05	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1693	5	5-2025-12-05-1100	2025-12-05	2025-12-05	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1694	5	5-2025-12-05-1200	2025-12-05	2025-12-05	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1695	5	5-2025-12-05-1300	2025-12-05	2025-12-05	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1696	5	5-2025-12-05-1400	2025-12-05	2025-12-05	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1697	5	5-2025-12-05-1500	2025-12-05	2025-12-05	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1698	5	5-2025-12-05-1600	2025-12-05	2025-12-05	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1699	5	5-2025-12-05-1700	2025-12-05	2025-12-05	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1700	5	5-2025-12-06-1000	2025-12-06	2025-12-06	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1701	5	5-2025-12-06-1100	2025-12-06	2025-12-06	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1702	5	5-2025-12-06-1200	2025-12-06	2025-12-06	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1703	5	5-2025-12-06-1300	2025-12-06	2025-12-06	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1704	5	5-2025-12-06-1400	2025-12-06	2025-12-06	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1705	5	5-2025-12-06-1500	2025-12-06	2025-12-06	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1706	5	5-2025-12-06-1600	2025-12-06	2025-12-06	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1707	5	5-2025-12-06-1700	2025-12-06	2025-12-06	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1708	5	5-2025-12-07-1000	2025-12-07	2025-12-07	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1709	5	5-2025-12-07-1100	2025-12-07	2025-12-07	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1710	5	5-2025-12-07-1200	2025-12-07	2025-12-07	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1711	5	5-2025-12-07-1300	2025-12-07	2025-12-07	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1712	5	5-2025-12-07-1400	2025-12-07	2025-12-07	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1713	5	5-2025-12-07-1500	2025-12-07	2025-12-07	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1714	5	5-2025-12-07-1600	2025-12-07	2025-12-07	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1715	5	5-2025-12-07-1700	2025-12-07	2025-12-07	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1716	5	5-2025-12-08-1000	2025-12-08	2025-12-08	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1717	5	5-2025-12-08-1100	2025-12-08	2025-12-08	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1718	5	5-2025-12-08-1200	2025-12-08	2025-12-08	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1719	5	5-2025-12-08-1300	2025-12-08	2025-12-08	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1720	5	5-2025-12-08-1400	2025-12-08	2025-12-08	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1721	5	5-2025-12-08-1500	2025-12-08	2025-12-08	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1722	5	5-2025-12-08-1600	2025-12-08	2025-12-08	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1723	5	5-2025-12-08-1700	2025-12-08	2025-12-08	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1724	5	5-2025-12-09-1000	2025-12-09	2025-12-09	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1725	5	5-2025-12-09-1100	2025-12-09	2025-12-09	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1726	5	5-2025-12-09-1200	2025-12-09	2025-12-09	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1727	5	5-2025-12-09-1300	2025-12-09	2025-12-09	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1728	5	5-2025-12-09-1400	2025-12-09	2025-12-09	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1729	5	5-2025-12-09-1500	2025-12-09	2025-12-09	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1730	5	5-2025-12-09-1600	2025-12-09	2025-12-09	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1731	5	5-2025-12-09-1700	2025-12-09	2025-12-09	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1732	5	5-2025-12-10-1000	2025-12-10	2025-12-10	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1733	5	5-2025-12-10-1100	2025-12-10	2025-12-10	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1734	5	5-2025-12-10-1200	2025-12-10	2025-12-10	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1735	5	5-2025-12-10-1300	2025-12-10	2025-12-10	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1736	5	5-2025-12-10-1400	2025-12-10	2025-12-10	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1737	5	5-2025-12-10-1500	2025-12-10	2025-12-10	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1738	5	5-2025-12-10-1600	2025-12-10	2025-12-10	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1739	5	5-2025-12-10-1700	2025-12-10	2025-12-10	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1740	5	5-2025-12-11-1000	2025-12-11	2025-12-11	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1741	5	5-2025-12-11-1100	2025-12-11	2025-12-11	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1742	5	5-2025-12-11-1200	2025-12-11	2025-12-11	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1743	5	5-2025-12-11-1300	2025-12-11	2025-12-11	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1744	5	5-2025-12-11-1400	2025-12-11	2025-12-11	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1745	5	5-2025-12-11-1500	2025-12-11	2025-12-11	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1746	5	5-2025-12-11-1600	2025-12-11	2025-12-11	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1747	5	5-2025-12-11-1700	2025-12-11	2025-12-11	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1748	5	5-2025-12-12-1000	2025-12-12	2025-12-12	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1749	5	5-2025-12-12-1100	2025-12-12	2025-12-12	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1750	5	5-2025-12-12-1200	2025-12-12	2025-12-12	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1751	5	5-2025-12-12-1300	2025-12-12	2025-12-12	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1752	5	5-2025-12-12-1400	2025-12-12	2025-12-12	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1753	5	5-2025-12-12-1500	2025-12-12	2025-12-12	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1754	5	5-2025-12-12-1600	2025-12-12	2025-12-12	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1755	5	5-2025-12-12-1700	2025-12-12	2025-12-12	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1756	5	5-2025-12-13-1000	2025-12-13	2025-12-13	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1757	5	5-2025-12-13-1100	2025-12-13	2025-12-13	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1758	5	5-2025-12-13-1200	2025-12-13	2025-12-13	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1759	5	5-2025-12-13-1300	2025-12-13	2025-12-13	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1760	5	5-2025-12-13-1400	2025-12-13	2025-12-13	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1761	5	5-2025-12-13-1500	2025-12-13	2025-12-13	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1762	5	5-2025-12-13-1600	2025-12-13	2025-12-13	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1763	5	5-2025-12-13-1700	2025-12-13	2025-12-13	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1764	5	5-2025-12-14-1000	2025-12-14	2025-12-14	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1765	5	5-2025-12-14-1100	2025-12-14	2025-12-14	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1766	5	5-2025-12-14-1200	2025-12-14	2025-12-14	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1767	5	5-2025-12-14-1300	2025-12-14	2025-12-14	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1768	5	5-2025-12-14-1400	2025-12-14	2025-12-14	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1769	5	5-2025-12-14-1500	2025-12-14	2025-12-14	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1770	5	5-2025-12-14-1600	2025-12-14	2025-12-14	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1771	5	5-2025-12-14-1700	2025-12-14	2025-12-14	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1772	5	5-2025-12-15-1000	2025-12-15	2025-12-15	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1773	5	5-2025-12-15-1100	2025-12-15	2025-12-15	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1774	5	5-2025-12-15-1200	2025-12-15	2025-12-15	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1775	5	5-2025-12-15-1300	2025-12-15	2025-12-15	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1776	5	5-2025-12-15-1400	2025-12-15	2025-12-15	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1777	5	5-2025-12-15-1500	2025-12-15	2025-12-15	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1778	5	5-2025-12-15-1600	2025-12-15	2025-12-15	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1779	5	5-2025-12-15-1700	2025-12-15	2025-12-15	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1780	5	5-2025-12-16-1000	2025-12-16	2025-12-16	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1781	5	5-2025-12-16-1100	2025-12-16	2025-12-16	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1782	5	5-2025-12-16-1200	2025-12-16	2025-12-16	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1783	5	5-2025-12-16-1300	2025-12-16	2025-12-16	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1784	5	5-2025-12-16-1400	2025-12-16	2025-12-16	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1785	5	5-2025-12-16-1500	2025-12-16	2025-12-16	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1786	5	5-2025-12-16-1600	2025-12-16	2025-12-16	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1787	5	5-2025-12-16-1700	2025-12-16	2025-12-16	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1788	5	5-2025-12-17-1000	2025-12-17	2025-12-17	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1789	5	5-2025-12-17-1100	2025-12-17	2025-12-17	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1790	5	5-2025-12-17-1200	2025-12-17	2025-12-17	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1791	5	5-2025-12-17-1300	2025-12-17	2025-12-17	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1792	5	5-2025-12-17-1400	2025-12-17	2025-12-17	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1793	5	5-2025-12-17-1500	2025-12-17	2025-12-17	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1794	5	5-2025-12-17-1600	2025-12-17	2025-12-17	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1795	5	5-2025-12-17-1700	2025-12-17	2025-12-17	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1796	5	5-2025-12-18-1000	2025-12-18	2025-12-18	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1797	5	5-2025-12-18-1100	2025-12-18	2025-12-18	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1798	5	5-2025-12-18-1200	2025-12-18	2025-12-18	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1799	5	5-2025-12-18-1300	2025-12-18	2025-12-18	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1800	5	5-2025-12-18-1400	2025-12-18	2025-12-18	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1801	5	5-2025-12-18-1500	2025-12-18	2025-12-18	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1802	5	5-2025-12-18-1600	2025-12-18	2025-12-18	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1803	5	5-2025-12-18-1700	2025-12-18	2025-12-18	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1804	5	5-2025-12-19-1000	2025-12-19	2025-12-19	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1805	5	5-2025-12-19-1100	2025-12-19	2025-12-19	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1806	5	5-2025-12-19-1200	2025-12-19	2025-12-19	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1807	5	5-2025-12-19-1300	2025-12-19	2025-12-19	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1808	5	5-2025-12-19-1400	2025-12-19	2025-12-19	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1809	5	5-2025-12-19-1500	2025-12-19	2025-12-19	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1810	5	5-2025-12-19-1600	2025-12-19	2025-12-19	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1811	5	5-2025-12-19-1700	2025-12-19	2025-12-19	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1812	5	5-2025-12-20-1000	2025-12-20	2025-12-20	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1813	5	5-2025-12-20-1100	2025-12-20	2025-12-20	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1814	5	5-2025-12-20-1200	2025-12-20	2025-12-20	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1815	5	5-2025-12-20-1300	2025-12-20	2025-12-20	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1816	5	5-2025-12-20-1400	2025-12-20	2025-12-20	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1817	5	5-2025-12-20-1500	2025-12-20	2025-12-20	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1818	5	5-2025-12-20-1600	2025-12-20	2025-12-20	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1819	5	5-2025-12-20-1700	2025-12-20	2025-12-20	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1820	5	5-2025-12-21-1000	2025-12-21	2025-12-21	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1821	5	5-2025-12-21-1100	2025-12-21	2025-12-21	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1822	5	5-2025-12-21-1200	2025-12-21	2025-12-21	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1823	5	5-2025-12-21-1300	2025-12-21	2025-12-21	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1824	5	5-2025-12-21-1400	2025-12-21	2025-12-21	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1825	5	5-2025-12-21-1500	2025-12-21	2025-12-21	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1826	5	5-2025-12-21-1600	2025-12-21	2025-12-21	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1827	5	5-2025-12-21-1700	2025-12-21	2025-12-21	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1828	5	5-2025-12-22-1000	2025-12-22	2025-12-22	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1829	5	5-2025-12-22-1100	2025-12-22	2025-12-22	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1830	5	5-2025-12-22-1200	2025-12-22	2025-12-22	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1831	5	5-2025-12-22-1300	2025-12-22	2025-12-22	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1832	5	5-2025-12-22-1400	2025-12-22	2025-12-22	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1833	5	5-2025-12-22-1500	2025-12-22	2025-12-22	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1834	5	5-2025-12-22-1600	2025-12-22	2025-12-22	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1835	5	5-2025-12-22-1700	2025-12-22	2025-12-22	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1836	5	5-2025-12-23-1000	2025-12-23	2025-12-23	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1837	5	5-2025-12-23-1100	2025-12-23	2025-12-23	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1838	5	5-2025-12-23-1200	2025-12-23	2025-12-23	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1839	5	5-2025-12-23-1300	2025-12-23	2025-12-23	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1840	5	5-2025-12-23-1400	2025-12-23	2025-12-23	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1841	5	5-2025-12-23-1500	2025-12-23	2025-12-23	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1842	5	5-2025-12-23-1600	2025-12-23	2025-12-23	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1843	5	5-2025-12-23-1700	2025-12-23	2025-12-23	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1844	5	5-2025-12-24-1000	2025-12-24	2025-12-24	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1845	5	5-2025-12-24-1100	2025-12-24	2025-12-24	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1846	5	5-2025-12-24-1200	2025-12-24	2025-12-24	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1847	5	5-2025-12-24-1300	2025-12-24	2025-12-24	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1848	5	5-2025-12-24-1400	2025-12-24	2025-12-24	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1849	5	5-2025-12-24-1500	2025-12-24	2025-12-24	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1850	5	5-2025-12-24-1600	2025-12-24	2025-12-24	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1851	5	5-2025-12-24-1700	2025-12-24	2025-12-24	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1852	5	5-2025-12-25-1000	2025-12-25	2025-12-25	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1853	5	5-2025-12-25-1100	2025-12-25	2025-12-25	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1854	5	5-2025-12-25-1200	2025-12-25	2025-12-25	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1855	5	5-2025-12-25-1300	2025-12-25	2025-12-25	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1856	5	5-2025-12-25-1400	2025-12-25	2025-12-25	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1857	5	5-2025-12-25-1500	2025-12-25	2025-12-25	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1858	5	5-2025-12-25-1600	2025-12-25	2025-12-25	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1859	5	5-2025-12-25-1700	2025-12-25	2025-12-25	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1860	5	5-2025-12-26-1000	2025-12-26	2025-12-26	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1861	5	5-2025-12-26-1100	2025-12-26	2025-12-26	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1862	5	5-2025-12-26-1200	2025-12-26	2025-12-26	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1863	5	5-2025-12-26-1300	2025-12-26	2025-12-26	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1864	5	5-2025-12-26-1400	2025-12-26	2025-12-26	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1865	5	5-2025-12-26-1500	2025-12-26	2025-12-26	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1866	5	5-2025-12-26-1600	2025-12-26	2025-12-26	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1867	5	5-2025-12-26-1700	2025-12-26	2025-12-26	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1868	5	5-2025-12-27-1000	2025-12-27	2025-12-27	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1869	5	5-2025-12-27-1100	2025-12-27	2025-12-27	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1870	5	5-2025-12-27-1200	2025-12-27	2025-12-27	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1871	5	5-2025-12-27-1300	2025-12-27	2025-12-27	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1872	5	5-2025-12-27-1400	2025-12-27	2025-12-27	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1873	5	5-2025-12-27-1500	2025-12-27	2025-12-27	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1874	5	5-2025-12-27-1600	2025-12-27	2025-12-27	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1875	5	5-2025-12-27-1700	2025-12-27	2025-12-27	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1876	5	5-2025-12-28-1000	2025-12-28	2025-12-28	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1877	5	5-2025-12-28-1100	2025-12-28	2025-12-28	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1878	5	5-2025-12-28-1200	2025-12-28	2025-12-28	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1879	5	5-2025-12-28-1300	2025-12-28	2025-12-28	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1880	5	5-2025-12-28-1400	2025-12-28	2025-12-28	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1881	5	5-2025-12-28-1500	2025-12-28	2025-12-28	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1882	5	5-2025-12-28-1600	2025-12-28	2025-12-28	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1883	5	5-2025-12-28-1700	2025-12-28	2025-12-28	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1884	5	5-2025-12-29-1000	2025-12-29	2025-12-29	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1885	5	5-2025-12-29-1100	2025-12-29	2025-12-29	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1886	5	5-2025-12-29-1200	2025-12-29	2025-12-29	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1887	5	5-2025-12-29-1300	2025-12-29	2025-12-29	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1888	5	5-2025-12-29-1400	2025-12-29	2025-12-29	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1889	5	5-2025-12-29-1500	2025-12-29	2025-12-29	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1890	5	5-2025-12-29-1600	2025-12-29	2025-12-29	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1891	5	5-2025-12-29-1700	2025-12-29	2025-12-29	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1892	5	5-2025-12-30-1000	2025-12-30	2025-12-30	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1893	5	5-2025-12-30-1100	2025-12-30	2025-12-30	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1894	5	5-2025-12-30-1200	2025-12-30	2025-12-30	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1895	5	5-2025-12-30-1300	2025-12-30	2025-12-30	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1896	5	5-2025-12-30-1400	2025-12-30	2025-12-30	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1897	5	5-2025-12-30-1500	2025-12-30	2025-12-30	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1898	5	5-2025-12-30-1600	2025-12-30	2025-12-30	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1899	5	5-2025-12-30-1700	2025-12-30	2025-12-30	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1900	5	5-2025-12-31-1000	2025-12-31	2025-12-31	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1901	5	5-2025-12-31-1100	2025-12-31	2025-12-31	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1902	5	5-2025-12-31-1200	2025-12-31	2025-12-31	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1903	5	5-2025-12-31-1300	2025-12-31	2025-12-31	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1904	5	5-2025-12-31-1400	2025-12-31	2025-12-31	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1905	5	5-2025-12-31-1500	2025-12-31	2025-12-31	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1906	5	5-2025-12-31-1600	2025-12-31	2025-12-31	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1907	5	5-2025-12-31-1700	2025-12-31	2025-12-31	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1908	5	5-2026-01-01-1000	2026-01-01	2026-01-01	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1909	5	5-2026-01-01-1100	2026-01-01	2026-01-01	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1910	5	5-2026-01-01-1200	2026-01-01	2026-01-01	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1911	5	5-2026-01-01-1300	2026-01-01	2026-01-01	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1912	5	5-2026-01-01-1400	2026-01-01	2026-01-01	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1913	5	5-2026-01-01-1500	2026-01-01	2026-01-01	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1914	5	5-2026-01-01-1600	2026-01-01	2026-01-01	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1915	5	5-2026-01-01-1700	2026-01-01	2026-01-01	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1916	5	5-2026-01-02-1000	2026-01-02	2026-01-02	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1917	5	5-2026-01-02-1100	2026-01-02	2026-01-02	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1918	5	5-2026-01-02-1200	2026-01-02	2026-01-02	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1919	5	5-2026-01-02-1300	2026-01-02	2026-01-02	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1920	5	5-2026-01-02-1400	2026-01-02	2026-01-02	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1921	5	5-2026-01-02-1500	2026-01-02	2026-01-02	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1922	5	5-2026-01-02-1600	2026-01-02	2026-01-02	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1923	5	5-2026-01-02-1700	2026-01-02	2026-01-02	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1924	5	5-2026-01-03-1000	2026-01-03	2026-01-03	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1925	5	5-2026-01-03-1100	2026-01-03	2026-01-03	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1926	5	5-2026-01-03-1200	2026-01-03	2026-01-03	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1927	5	5-2026-01-03-1300	2026-01-03	2026-01-03	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1928	5	5-2026-01-03-1400	2026-01-03	2026-01-03	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1929	5	5-2026-01-03-1500	2026-01-03	2026-01-03	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1930	5	5-2026-01-03-1600	2026-01-03	2026-01-03	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1931	5	5-2026-01-03-1700	2026-01-03	2026-01-03	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1932	5	5-2026-01-04-1000	2026-01-04	2026-01-04	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1933	5	5-2026-01-04-1100	2026-01-04	2026-01-04	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1934	5	5-2026-01-04-1200	2026-01-04	2026-01-04	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1935	5	5-2026-01-04-1300	2026-01-04	2026-01-04	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1936	5	5-2026-01-04-1400	2026-01-04	2026-01-04	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1937	5	5-2026-01-04-1500	2026-01-04	2026-01-04	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1938	5	5-2026-01-04-1600	2026-01-04	2026-01-04	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1939	5	5-2026-01-04-1700	2026-01-04	2026-01-04	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1940	5	5-2026-01-05-1000	2026-01-05	2026-01-05	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1941	5	5-2026-01-05-1100	2026-01-05	2026-01-05	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1942	5	5-2026-01-05-1200	2026-01-05	2026-01-05	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1943	5	5-2026-01-05-1300	2026-01-05	2026-01-05	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1944	5	5-2026-01-05-1400	2026-01-05	2026-01-05	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1945	5	5-2026-01-05-1500	2026-01-05	2026-01-05	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1946	5	5-2026-01-05-1600	2026-01-05	2026-01-05	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1947	5	5-2026-01-05-1700	2026-01-05	2026-01-05	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1948	5	5-2026-01-06-1000	2026-01-06	2026-01-06	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1949	5	5-2026-01-06-1100	2026-01-06	2026-01-06	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1950	5	5-2026-01-06-1200	2026-01-06	2026-01-06	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1951	5	5-2026-01-06-1300	2026-01-06	2026-01-06	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1952	5	5-2026-01-06-1400	2026-01-06	2026-01-06	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1953	5	5-2026-01-06-1500	2026-01-06	2026-01-06	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1954	5	5-2026-01-06-1600	2026-01-06	2026-01-06	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1955	5	5-2026-01-06-1700	2026-01-06	2026-01-06	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1956	5	5-2026-01-07-1000	2026-01-07	2026-01-07	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1957	5	5-2026-01-07-1100	2026-01-07	2026-01-07	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1958	5	5-2026-01-07-1200	2026-01-07	2026-01-07	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1959	5	5-2026-01-07-1300	2026-01-07	2026-01-07	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1960	5	5-2026-01-07-1400	2026-01-07	2026-01-07	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1961	5	5-2026-01-07-1500	2026-01-07	2026-01-07	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1962	5	5-2026-01-07-1600	2026-01-07	2026-01-07	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1963	5	5-2026-01-07-1700	2026-01-07	2026-01-07	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1964	5	5-2026-01-08-1000	2026-01-08	2026-01-08	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1965	5	5-2026-01-08-1100	2026-01-08	2026-01-08	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1966	5	5-2026-01-08-1200	2026-01-08	2026-01-08	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1967	5	5-2026-01-08-1300	2026-01-08	2026-01-08	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1968	5	5-2026-01-08-1400	2026-01-08	2026-01-08	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1969	5	5-2026-01-08-1500	2026-01-08	2026-01-08	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1970	5	5-2026-01-08-1600	2026-01-08	2026-01-08	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1971	5	5-2026-01-08-1700	2026-01-08	2026-01-08	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1972	5	5-2026-01-09-1000	2026-01-09	2026-01-09	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1973	5	5-2026-01-09-1100	2026-01-09	2026-01-09	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1974	5	5-2026-01-09-1200	2026-01-09	2026-01-09	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1975	5	5-2026-01-09-1300	2026-01-09	2026-01-09	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1976	5	5-2026-01-09-1400	2026-01-09	2026-01-09	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1977	5	5-2026-01-09-1500	2026-01-09	2026-01-09	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1978	5	5-2026-01-09-1600	2026-01-09	2026-01-09	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1979	5	5-2026-01-09-1700	2026-01-09	2026-01-09	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1980	5	5-2026-01-10-1000	2026-01-10	2026-01-10	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1981	5	5-2026-01-10-1100	2026-01-10	2026-01-10	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1982	5	5-2026-01-10-1200	2026-01-10	2026-01-10	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1983	5	5-2026-01-10-1300	2026-01-10	2026-01-10	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1984	5	5-2026-01-10-1400	2026-01-10	2026-01-10	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1985	5	5-2026-01-10-1500	2026-01-10	2026-01-10	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1986	5	5-2026-01-10-1600	2026-01-10	2026-01-10	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1987	5	5-2026-01-10-1700	2026-01-10	2026-01-10	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1988	5	5-2026-01-11-1000	2026-01-11	2026-01-11	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1989	5	5-2026-01-11-1100	2026-01-11	2026-01-11	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1990	5	5-2026-01-11-1200	2026-01-11	2026-01-11	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1991	5	5-2026-01-11-1300	2026-01-11	2026-01-11	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1992	5	5-2026-01-11-1400	2026-01-11	2026-01-11	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1993	5	5-2026-01-11-1500	2026-01-11	2026-01-11	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1994	5	5-2026-01-11-1600	2026-01-11	2026-01-11	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1995	5	5-2026-01-11-1700	2026-01-11	2026-01-11	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1996	5	5-2026-01-12-1000	2026-01-12	2026-01-12	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1997	5	5-2026-01-12-1100	2026-01-12	2026-01-12	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1998	5	5-2026-01-12-1200	2026-01-12	2026-01-12	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+1999	5	5-2026-01-12-1300	2026-01-12	2026-01-12	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2000	5	5-2026-01-12-1400	2026-01-12	2026-01-12	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2001	5	5-2026-01-12-1500	2026-01-12	2026-01-12	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2002	5	5-2026-01-12-1600	2026-01-12	2026-01-12	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2003	5	5-2026-01-12-1700	2026-01-12	2026-01-12	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2004	5	5-2026-01-13-1000	2026-01-13	2026-01-13	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2005	5	5-2026-01-13-1100	2026-01-13	2026-01-13	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2006	5	5-2026-01-13-1200	2026-01-13	2026-01-13	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2007	5	5-2026-01-13-1300	2026-01-13	2026-01-13	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2008	5	5-2026-01-13-1400	2026-01-13	2026-01-13	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2009	5	5-2026-01-13-1500	2026-01-13	2026-01-13	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2010	5	5-2026-01-13-1600	2026-01-13	2026-01-13	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2011	5	5-2026-01-13-1700	2026-01-13	2026-01-13	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2012	5	5-2026-01-14-1000	2026-01-14	2026-01-14	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2013	5	5-2026-01-14-1100	2026-01-14	2026-01-14	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2014	5	5-2026-01-14-1200	2026-01-14	2026-01-14	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2015	5	5-2026-01-14-1300	2026-01-14	2026-01-14	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2016	5	5-2026-01-14-1400	2026-01-14	2026-01-14	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2017	5	5-2026-01-14-1500	2026-01-14	2026-01-14	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2018	5	5-2026-01-14-1600	2026-01-14	2026-01-14	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2019	5	5-2026-01-14-1700	2026-01-14	2026-01-14	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2020	5	5-2026-01-15-1000	2026-01-15	2026-01-15	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2021	5	5-2026-01-15-1100	2026-01-15	2026-01-15	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2022	5	5-2026-01-15-1200	2026-01-15	2026-01-15	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2023	5	5-2026-01-15-1300	2026-01-15	2026-01-15	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2024	5	5-2026-01-15-1400	2026-01-15	2026-01-15	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2025	5	5-2026-01-15-1500	2026-01-15	2026-01-15	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2026	5	5-2026-01-15-1600	2026-01-15	2026-01-15	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2027	5	5-2026-01-15-1700	2026-01-15	2026-01-15	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2028	5	5-2026-01-16-1000	2026-01-16	2026-01-16	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2029	5	5-2026-01-16-1100	2026-01-16	2026-01-16	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2030	5	5-2026-01-16-1200	2026-01-16	2026-01-16	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2031	5	5-2026-01-16-1300	2026-01-16	2026-01-16	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2032	5	5-2026-01-16-1400	2026-01-16	2026-01-16	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2033	5	5-2026-01-16-1500	2026-01-16	2026-01-16	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2034	5	5-2026-01-16-1600	2026-01-16	2026-01-16	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2035	5	5-2026-01-16-1700	2026-01-16	2026-01-16	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2036	5	5-2026-01-17-1000	2026-01-17	2026-01-17	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2037	5	5-2026-01-17-1100	2026-01-17	2026-01-17	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2038	5	5-2026-01-17-1200	2026-01-17	2026-01-17	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2039	5	5-2026-01-17-1300	2026-01-17	2026-01-17	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2040	5	5-2026-01-17-1400	2026-01-17	2026-01-17	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2041	5	5-2026-01-17-1500	2026-01-17	2026-01-17	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2042	5	5-2026-01-17-1600	2026-01-17	2026-01-17	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2043	5	5-2026-01-17-1700	2026-01-17	2026-01-17	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2044	5	5-2026-01-18-1000	2026-01-18	2026-01-18	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2045	5	5-2026-01-18-1100	2026-01-18	2026-01-18	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2046	5	5-2026-01-18-1200	2026-01-18	2026-01-18	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2047	5	5-2026-01-18-1300	2026-01-18	2026-01-18	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2048	5	5-2026-01-18-1400	2026-01-18	2026-01-18	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2049	5	5-2026-01-18-1500	2026-01-18	2026-01-18	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2050	5	5-2026-01-18-1600	2026-01-18	2026-01-18	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2051	5	5-2026-01-18-1700	2026-01-18	2026-01-18	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2052	5	5-2026-01-19-1000	2026-01-19	2026-01-19	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2053	5	5-2026-01-19-1100	2026-01-19	2026-01-19	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2054	5	5-2026-01-19-1200	2026-01-19	2026-01-19	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2055	5	5-2026-01-19-1300	2026-01-19	2026-01-19	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2056	5	5-2026-01-19-1400	2026-01-19	2026-01-19	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2057	5	5-2026-01-19-1500	2026-01-19	2026-01-19	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2058	5	5-2026-01-19-1600	2026-01-19	2026-01-19	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2059	5	5-2026-01-19-1700	2026-01-19	2026-01-19	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2060	5	5-2026-01-20-1000	2026-01-20	2026-01-20	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2061	5	5-2026-01-20-1100	2026-01-20	2026-01-20	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2062	5	5-2026-01-20-1200	2026-01-20	2026-01-20	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2063	5	5-2026-01-20-1300	2026-01-20	2026-01-20	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2064	5	5-2026-01-20-1400	2026-01-20	2026-01-20	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2065	5	5-2026-01-20-1500	2026-01-20	2026-01-20	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2066	5	5-2026-01-20-1600	2026-01-20	2026-01-20	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2067	5	5-2026-01-20-1700	2026-01-20	2026-01-20	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2068	5	5-2026-01-21-1000	2026-01-21	2026-01-21	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2069	5	5-2026-01-21-1100	2026-01-21	2026-01-21	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2070	5	5-2026-01-21-1200	2026-01-21	2026-01-21	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2071	5	5-2026-01-21-1300	2026-01-21	2026-01-21	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2072	5	5-2026-01-21-1400	2026-01-21	2026-01-21	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2073	5	5-2026-01-21-1500	2026-01-21	2026-01-21	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2074	5	5-2026-01-21-1600	2026-01-21	2026-01-21	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2075	5	5-2026-01-21-1700	2026-01-21	2026-01-21	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2076	5	5-2026-01-22-1000	2026-01-22	2026-01-22	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2077	5	5-2026-01-22-1100	2026-01-22	2026-01-22	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2078	5	5-2026-01-22-1200	2026-01-22	2026-01-22	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2079	5	5-2026-01-22-1300	2026-01-22	2026-01-22	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2080	5	5-2026-01-22-1400	2026-01-22	2026-01-22	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2081	5	5-2026-01-22-1500	2026-01-22	2026-01-22	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2082	5	5-2026-01-22-1600	2026-01-22	2026-01-22	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2083	5	5-2026-01-22-1700	2026-01-22	2026-01-22	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2084	5	5-2026-01-23-1000	2026-01-23	2026-01-23	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2085	5	5-2026-01-23-1100	2026-01-23	2026-01-23	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2086	5	5-2026-01-23-1200	2026-01-23	2026-01-23	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2087	5	5-2026-01-23-1300	2026-01-23	2026-01-23	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2088	5	5-2026-01-23-1400	2026-01-23	2026-01-23	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2089	5	5-2026-01-23-1500	2026-01-23	2026-01-23	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2090	5	5-2026-01-23-1600	2026-01-23	2026-01-23	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2091	5	5-2026-01-23-1700	2026-01-23	2026-01-23	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2092	5	5-2026-01-24-1000	2026-01-24	2026-01-24	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2093	5	5-2026-01-24-1100	2026-01-24	2026-01-24	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2094	5	5-2026-01-24-1200	2026-01-24	2026-01-24	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2095	5	5-2026-01-24-1300	2026-01-24	2026-01-24	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2096	5	5-2026-01-24-1400	2026-01-24	2026-01-24	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2097	5	5-2026-01-24-1500	2026-01-24	2026-01-24	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2098	5	5-2026-01-24-1600	2026-01-24	2026-01-24	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2099	5	5-2026-01-24-1700	2026-01-24	2026-01-24	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2100	5	5-2026-01-25-1000	2026-01-25	2026-01-25	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2101	5	5-2026-01-25-1100	2026-01-25	2026-01-25	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2102	5	5-2026-01-25-1200	2026-01-25	2026-01-25	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2103	5	5-2026-01-25-1300	2026-01-25	2026-01-25	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2104	5	5-2026-01-25-1400	2026-01-25	2026-01-25	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2105	5	5-2026-01-25-1500	2026-01-25	2026-01-25	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2106	5	5-2026-01-25-1600	2026-01-25	2026-01-25	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2107	5	5-2026-01-25-1700	2026-01-25	2026-01-25	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2108	5	5-2026-01-26-1000	2026-01-26	2026-01-26	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2109	5	5-2026-01-26-1100	2026-01-26	2026-01-26	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2110	5	5-2026-01-26-1200	2026-01-26	2026-01-26	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2111	5	5-2026-01-26-1300	2026-01-26	2026-01-26	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2112	5	5-2026-01-26-1400	2026-01-26	2026-01-26	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2113	5	5-2026-01-26-1500	2026-01-26	2026-01-26	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2114	5	5-2026-01-26-1600	2026-01-26	2026-01-26	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2115	5	5-2026-01-26-1700	2026-01-26	2026-01-26	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2116	5	5-2026-01-27-1000	2026-01-27	2026-01-27	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2117	5	5-2026-01-27-1100	2026-01-27	2026-01-27	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2118	5	5-2026-01-27-1200	2026-01-27	2026-01-27	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2119	5	5-2026-01-27-1300	2026-01-27	2026-01-27	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2120	5	5-2026-01-27-1400	2026-01-27	2026-01-27	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2121	5	5-2026-01-27-1500	2026-01-27	2026-01-27	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2122	5	5-2026-01-27-1600	2026-01-27	2026-01-27	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2123	5	5-2026-01-27-1700	2026-01-27	2026-01-27	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2124	5	5-2026-01-28-1000	2026-01-28	2026-01-28	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2125	5	5-2026-01-28-1100	2026-01-28	2026-01-28	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2126	5	5-2026-01-28-1200	2026-01-28	2026-01-28	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2127	5	5-2026-01-28-1300	2026-01-28	2026-01-28	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2128	5	5-2026-01-28-1400	2026-01-28	2026-01-28	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2129	5	5-2026-01-28-1500	2026-01-28	2026-01-28	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2130	5	5-2026-01-28-1600	2026-01-28	2026-01-28	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2131	5	5-2026-01-28-1700	2026-01-28	2026-01-28	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2132	5	5-2026-01-29-1000	2026-01-29	2026-01-29	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2133	5	5-2026-01-29-1100	2026-01-29	2026-01-29	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2134	5	5-2026-01-29-1200	2026-01-29	2026-01-29	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2135	5	5-2026-01-29-1300	2026-01-29	2026-01-29	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2136	5	5-2026-01-29-1400	2026-01-29	2026-01-29	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2137	5	5-2026-01-29-1500	2026-01-29	2026-01-29	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2138	5	5-2026-01-29-1600	2026-01-29	2026-01-29	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2139	5	5-2026-01-29-1700	2026-01-29	2026-01-29	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2140	5	5-2026-01-30-1000	2026-01-30	2026-01-30	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2141	5	5-2026-01-30-1100	2026-01-30	2026-01-30	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2142	5	5-2026-01-30-1200	2026-01-30	2026-01-30	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2143	5	5-2026-01-30-1300	2026-01-30	2026-01-30	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2144	5	5-2026-01-30-1400	2026-01-30	2026-01-30	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2145	5	5-2026-01-30-1500	2026-01-30	2026-01-30	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2146	5	5-2026-01-30-1600	2026-01-30	2026-01-30	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2147	5	5-2026-01-30-1700	2026-01-30	2026-01-30	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2148	5	5-2026-01-31-1000	2026-01-31	2026-01-31	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2149	5	5-2026-01-31-1100	2026-01-31	2026-01-31	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2150	5	5-2026-01-31-1200	2026-01-31	2026-01-31	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2151	5	5-2026-01-31-1300	2026-01-31	2026-01-31	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2152	5	5-2026-01-31-1400	2026-01-31	2026-01-31	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2153	5	5-2026-01-31-1500	2026-01-31	2026-01-31	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2154	5	5-2026-01-31-1600	2026-01-31	2026-01-31	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2155	5	5-2026-01-31-1700	2026-01-31	2026-01-31	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2156	5	5-2026-02-01-1000	2026-02-01	2026-02-01	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2157	5	5-2026-02-01-1100	2026-02-01	2026-02-01	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2158	5	5-2026-02-01-1200	2026-02-01	2026-02-01	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2159	5	5-2026-02-01-1300	2026-02-01	2026-02-01	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2160	5	5-2026-02-01-1400	2026-02-01	2026-02-01	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2161	5	5-2026-02-01-1500	2026-02-01	2026-02-01	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2162	5	5-2026-02-01-1600	2026-02-01	2026-02-01	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2163	5	5-2026-02-01-1700	2026-02-01	2026-02-01	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2164	5	5-2026-02-02-1000	2026-02-02	2026-02-02	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2165	5	5-2026-02-02-1100	2026-02-02	2026-02-02	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2166	5	5-2026-02-02-1200	2026-02-02	2026-02-02	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2167	5	5-2026-02-02-1300	2026-02-02	2026-02-02	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2168	5	5-2026-02-02-1400	2026-02-02	2026-02-02	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2169	5	5-2026-02-02-1500	2026-02-02	2026-02-02	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2170	5	5-2026-02-02-1600	2026-02-02	2026-02-02	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2171	5	5-2026-02-02-1700	2026-02-02	2026-02-02	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2172	5	5-2026-02-03-1000	2026-02-03	2026-02-03	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2173	5	5-2026-02-03-1100	2026-02-03	2026-02-03	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2174	5	5-2026-02-03-1200	2026-02-03	2026-02-03	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2175	5	5-2026-02-03-1300	2026-02-03	2026-02-03	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2176	5	5-2026-02-03-1400	2026-02-03	2026-02-03	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2177	5	5-2026-02-03-1500	2026-02-03	2026-02-03	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2178	5	5-2026-02-03-1600	2026-02-03	2026-02-03	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2179	5	5-2026-02-03-1700	2026-02-03	2026-02-03	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2180	5	5-2026-02-04-1000	2026-02-04	2026-02-04	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2181	5	5-2026-02-04-1100	2026-02-04	2026-02-04	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2182	5	5-2026-02-04-1200	2026-02-04	2026-02-04	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2183	5	5-2026-02-04-1300	2026-02-04	2026-02-04	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2184	5	5-2026-02-04-1400	2026-02-04	2026-02-04	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2185	5	5-2026-02-04-1500	2026-02-04	2026-02-04	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2186	5	5-2026-02-04-1600	2026-02-04	2026-02-04	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2187	5	5-2026-02-04-1700	2026-02-04	2026-02-04	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2188	5	5-2026-02-05-1000	2026-02-05	2026-02-05	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2189	5	5-2026-02-05-1100	2026-02-05	2026-02-05	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2190	5	5-2026-02-05-1200	2026-02-05	2026-02-05	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2191	5	5-2026-02-05-1300	2026-02-05	2026-02-05	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2192	5	5-2026-02-05-1400	2026-02-05	2026-02-05	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2193	5	5-2026-02-05-1500	2026-02-05	2026-02-05	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2194	5	5-2026-02-05-1600	2026-02-05	2026-02-05	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2195	5	5-2026-02-05-1700	2026-02-05	2026-02-05	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2196	5	5-2026-02-06-1000	2026-02-06	2026-02-06	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2197	5	5-2026-02-06-1100	2026-02-06	2026-02-06	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2198	5	5-2026-02-06-1200	2026-02-06	2026-02-06	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2199	5	5-2026-02-06-1300	2026-02-06	2026-02-06	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2200	5	5-2026-02-06-1400	2026-02-06	2026-02-06	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2201	5	5-2026-02-06-1500	2026-02-06	2026-02-06	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2202	5	5-2026-02-06-1600	2026-02-06	2026-02-06	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2203	5	5-2026-02-06-1700	2026-02-06	2026-02-06	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2204	5	5-2026-02-07-1000	2026-02-07	2026-02-07	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2205	5	5-2026-02-07-1100	2026-02-07	2026-02-07	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2206	5	5-2026-02-07-1200	2026-02-07	2026-02-07	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2207	5	5-2026-02-07-1300	2026-02-07	2026-02-07	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2208	5	5-2026-02-07-1400	2026-02-07	2026-02-07	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2209	5	5-2026-02-07-1500	2026-02-07	2026-02-07	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2210	5	5-2026-02-07-1600	2026-02-07	2026-02-07	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2211	5	5-2026-02-07-1700	2026-02-07	2026-02-07	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2212	5	5-2026-02-08-1000	2026-02-08	2026-02-08	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2213	5	5-2026-02-08-1100	2026-02-08	2026-02-08	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2214	5	5-2026-02-08-1200	2026-02-08	2026-02-08	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2215	5	5-2026-02-08-1300	2026-02-08	2026-02-08	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2216	5	5-2026-02-08-1400	2026-02-08	2026-02-08	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2217	5	5-2026-02-08-1500	2026-02-08	2026-02-08	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2218	5	5-2026-02-08-1600	2026-02-08	2026-02-08	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2219	5	5-2026-02-08-1700	2026-02-08	2026-02-08	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2220	5	5-2026-02-09-1000	2026-02-09	2026-02-09	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2221	5	5-2026-02-09-1100	2026-02-09	2026-02-09	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2222	5	5-2026-02-09-1200	2026-02-09	2026-02-09	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2223	5	5-2026-02-09-1300	2026-02-09	2026-02-09	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2224	5	5-2026-02-09-1400	2026-02-09	2026-02-09	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2225	5	5-2026-02-09-1500	2026-02-09	2026-02-09	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2226	5	5-2026-02-09-1600	2026-02-09	2026-02-09	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2227	5	5-2026-02-09-1700	2026-02-09	2026-02-09	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2228	5	5-2026-02-10-1000	2026-02-10	2026-02-10	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2229	5	5-2026-02-10-1100	2026-02-10	2026-02-10	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2230	5	5-2026-02-10-1200	2026-02-10	2026-02-10	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2231	5	5-2026-02-10-1300	2026-02-10	2026-02-10	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2232	5	5-2026-02-10-1400	2026-02-10	2026-02-10	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2233	5	5-2026-02-10-1500	2026-02-10	2026-02-10	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2234	5	5-2026-02-10-1600	2026-02-10	2026-02-10	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2235	5	5-2026-02-10-1700	2026-02-10	2026-02-10	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2236	5	5-2026-02-11-1000	2026-02-11	2026-02-11	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2237	5	5-2026-02-11-1100	2026-02-11	2026-02-11	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2238	5	5-2026-02-11-1200	2026-02-11	2026-02-11	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2239	5	5-2026-02-11-1300	2026-02-11	2026-02-11	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2240	5	5-2026-02-11-1400	2026-02-11	2026-02-11	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2241	5	5-2026-02-11-1500	2026-02-11	2026-02-11	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2242	5	5-2026-02-11-1600	2026-02-11	2026-02-11	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2243	5	5-2026-02-11-1700	2026-02-11	2026-02-11	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2244	5	5-2026-02-12-1000	2026-02-12	2026-02-12	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2245	5	5-2026-02-12-1100	2026-02-12	2026-02-12	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2246	5	5-2026-02-12-1200	2026-02-12	2026-02-12	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2247	5	5-2026-02-12-1300	2026-02-12	2026-02-12	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2248	5	5-2026-02-12-1400	2026-02-12	2026-02-12	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2249	5	5-2026-02-12-1500	2026-02-12	2026-02-12	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2250	5	5-2026-02-12-1600	2026-02-12	2026-02-12	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2251	5	5-2026-02-12-1700	2026-02-12	2026-02-12	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2252	5	5-2026-02-13-1000	2026-02-13	2026-02-13	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2253	5	5-2026-02-13-1100	2026-02-13	2026-02-13	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2254	5	5-2026-02-13-1200	2026-02-13	2026-02-13	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2255	5	5-2026-02-13-1300	2026-02-13	2026-02-13	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2256	5	5-2026-02-13-1400	2026-02-13	2026-02-13	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2257	5	5-2026-02-13-1500	2026-02-13	2026-02-13	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2258	5	5-2026-02-13-1600	2026-02-13	2026-02-13	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2259	5	5-2026-02-13-1700	2026-02-13	2026-02-13	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2260	5	5-2026-02-14-1000	2026-02-14	2026-02-14	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2261	5	5-2026-02-14-1100	2026-02-14	2026-02-14	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2262	5	5-2026-02-14-1200	2026-02-14	2026-02-14	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2263	5	5-2026-02-14-1300	2026-02-14	2026-02-14	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2264	5	5-2026-02-14-1400	2026-02-14	2026-02-14	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2265	5	5-2026-02-14-1500	2026-02-14	2026-02-14	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2266	5	5-2026-02-14-1600	2026-02-14	2026-02-14	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2267	5	5-2026-02-14-1700	2026-02-14	2026-02-14	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2268	5	5-2026-02-15-1000	2026-02-15	2026-02-15	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2269	5	5-2026-02-15-1100	2026-02-15	2026-02-15	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2270	5	5-2026-02-15-1200	2026-02-15	2026-02-15	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2271	5	5-2026-02-15-1300	2026-02-15	2026-02-15	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2272	5	5-2026-02-15-1400	2026-02-15	2026-02-15	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2273	5	5-2026-02-15-1500	2026-02-15	2026-02-15	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2274	5	5-2026-02-15-1600	2026-02-15	2026-02-15	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2275	5	5-2026-02-15-1700	2026-02-15	2026-02-15	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2276	5	5-2026-02-16-1000	2026-02-16	2026-02-16	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2277	5	5-2026-02-16-1100	2026-02-16	2026-02-16	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2278	5	5-2026-02-16-1200	2026-02-16	2026-02-16	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2279	5	5-2026-02-16-1300	2026-02-16	2026-02-16	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2280	5	5-2026-02-16-1400	2026-02-16	2026-02-16	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2281	5	5-2026-02-16-1500	2026-02-16	2026-02-16	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2282	5	5-2026-02-16-1600	2026-02-16	2026-02-16	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2283	5	5-2026-02-16-1700	2026-02-16	2026-02-16	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2284	5	5-2026-02-17-1000	2026-02-17	2026-02-17	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2285	5	5-2026-02-17-1100	2026-02-17	2026-02-17	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2286	5	5-2026-02-17-1200	2026-02-17	2026-02-17	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2287	5	5-2026-02-17-1300	2026-02-17	2026-02-17	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2288	5	5-2026-02-17-1400	2026-02-17	2026-02-17	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2289	5	5-2026-02-17-1500	2026-02-17	2026-02-17	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2290	5	5-2026-02-17-1600	2026-02-17	2026-02-17	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2291	5	5-2026-02-17-1700	2026-02-17	2026-02-17	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2292	5	5-2026-02-18-1000	2026-02-18	2026-02-18	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2293	5	5-2026-02-18-1100	2026-02-18	2026-02-18	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2294	5	5-2026-02-18-1200	2026-02-18	2026-02-18	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2295	5	5-2026-02-18-1300	2026-02-18	2026-02-18	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2296	5	5-2026-02-18-1400	2026-02-18	2026-02-18	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2297	5	5-2026-02-18-1500	2026-02-18	2026-02-18	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2298	5	5-2026-02-18-1600	2026-02-18	2026-02-18	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2299	5	5-2026-02-18-1700	2026-02-18	2026-02-18	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2300	5	5-2026-02-19-1000	2026-02-19	2026-02-19	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2301	5	5-2026-02-19-1100	2026-02-19	2026-02-19	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2302	5	5-2026-02-19-1200	2026-02-19	2026-02-19	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2303	5	5-2026-02-19-1300	2026-02-19	2026-02-19	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2304	5	5-2026-02-19-1400	2026-02-19	2026-02-19	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2305	5	5-2026-02-19-1500	2026-02-19	2026-02-19	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2306	5	5-2026-02-19-1600	2026-02-19	2026-02-19	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2307	5	5-2026-02-19-1700	2026-02-19	2026-02-19	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2308	5	5-2026-02-20-1000	2026-02-20	2026-02-20	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2309	5	5-2026-02-20-1100	2026-02-20	2026-02-20	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2310	5	5-2026-02-20-1200	2026-02-20	2026-02-20	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2311	5	5-2026-02-20-1300	2026-02-20	2026-02-20	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2312	5	5-2026-02-20-1400	2026-02-20	2026-02-20	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2313	5	5-2026-02-20-1500	2026-02-20	2026-02-20	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2314	5	5-2026-02-20-1600	2026-02-20	2026-02-20	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2315	5	5-2026-02-20-1700	2026-02-20	2026-02-20	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2316	5	5-2026-02-21-1000	2026-02-21	2026-02-21	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2317	5	5-2026-02-21-1100	2026-02-21	2026-02-21	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2318	5	5-2026-02-21-1200	2026-02-21	2026-02-21	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2319	5	5-2026-02-21-1300	2026-02-21	2026-02-21	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2320	5	5-2026-02-21-1400	2026-02-21	2026-02-21	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2321	5	5-2026-02-21-1500	2026-02-21	2026-02-21	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2322	5	5-2026-02-21-1600	2026-02-21	2026-02-21	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2323	5	5-2026-02-21-1700	2026-02-21	2026-02-21	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2324	5	5-2026-02-22-1000	2026-02-22	2026-02-22	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2325	5	5-2026-02-22-1100	2026-02-22	2026-02-22	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2326	5	5-2026-02-22-1200	2026-02-22	2026-02-22	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2327	5	5-2026-02-22-1300	2026-02-22	2026-02-22	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2328	5	5-2026-02-22-1400	2026-02-22	2026-02-22	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2329	5	5-2026-02-22-1500	2026-02-22	2026-02-22	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2330	5	5-2026-02-22-1600	2026-02-22	2026-02-22	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2331	5	5-2026-02-22-1700	2026-02-22	2026-02-22	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2332	5	5-2026-02-23-1000	2026-02-23	2026-02-23	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2333	5	5-2026-02-23-1100	2026-02-23	2026-02-23	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2334	5	5-2026-02-23-1200	2026-02-23	2026-02-23	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2335	5	5-2026-02-23-1300	2026-02-23	2026-02-23	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2336	5	5-2026-02-23-1400	2026-02-23	2026-02-23	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2337	5	5-2026-02-23-1500	2026-02-23	2026-02-23	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2338	5	5-2026-02-23-1600	2026-02-23	2026-02-23	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2339	5	5-2026-02-23-1700	2026-02-23	2026-02-23	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2340	5	5-2026-02-24-1000	2026-02-24	2026-02-24	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2341	5	5-2026-02-24-1100	2026-02-24	2026-02-24	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2342	5	5-2026-02-24-1200	2026-02-24	2026-02-24	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2343	5	5-2026-02-24-1300	2026-02-24	2026-02-24	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2344	5	5-2026-02-24-1400	2026-02-24	2026-02-24	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2345	5	5-2026-02-24-1500	2026-02-24	2026-02-24	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2346	5	5-2026-02-24-1600	2026-02-24	2026-02-24	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2347	5	5-2026-02-24-1700	2026-02-24	2026-02-24	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2348	5	5-2026-02-25-1000	2026-02-25	2026-02-25	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2349	5	5-2026-02-25-1100	2026-02-25	2026-02-25	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2350	5	5-2026-02-25-1200	2026-02-25	2026-02-25	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2351	5	5-2026-02-25-1300	2026-02-25	2026-02-25	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2352	5	5-2026-02-25-1400	2026-02-25	2026-02-25	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2353	5	5-2026-02-25-1500	2026-02-25	2026-02-25	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2354	5	5-2026-02-25-1600	2026-02-25	2026-02-25	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2355	5	5-2026-02-25-1700	2026-02-25	2026-02-25	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2356	5	5-2026-02-26-1000	2026-02-26	2026-02-26	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2357	5	5-2026-02-26-1100	2026-02-26	2026-02-26	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2358	5	5-2026-02-26-1200	2026-02-26	2026-02-26	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2359	5	5-2026-02-26-1300	2026-02-26	2026-02-26	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2360	5	5-2026-02-26-1400	2026-02-26	2026-02-26	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2361	5	5-2026-02-26-1500	2026-02-26	2026-02-26	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2362	5	5-2026-02-26-1600	2026-02-26	2026-02-26	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2363	5	5-2026-02-26-1700	2026-02-26	2026-02-26	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2364	5	5-2026-02-27-1000	2026-02-27	2026-02-27	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2365	5	5-2026-02-27-1100	2026-02-27	2026-02-27	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2366	5	5-2026-02-27-1200	2026-02-27	2026-02-27	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2367	5	5-2026-02-27-1300	2026-02-27	2026-02-27	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2368	5	5-2026-02-27-1400	2026-02-27	2026-02-27	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2369	5	5-2026-02-27-1500	2026-02-27	2026-02-27	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2370	5	5-2026-02-27-1600	2026-02-27	2026-02-27	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2371	5	5-2026-02-27-1700	2026-02-27	2026-02-27	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2372	5	5-2026-02-28-1000	2026-02-28	2026-02-28	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2373	5	5-2026-02-28-1100	2026-02-28	2026-02-28	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2374	5	5-2026-02-28-1200	2026-02-28	2026-02-28	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2375	5	5-2026-02-28-1300	2026-02-28	2026-02-28	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2376	5	5-2026-02-28-1400	2026-02-28	2026-02-28	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2377	5	5-2026-02-28-1500	2026-02-28	2026-02-28	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2378	5	5-2026-02-28-1600	2026-02-28	2026-02-28	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2379	5	5-2026-02-28-1700	2026-02-28	2026-02-28	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2380	5	5-2026-03-01-1000	2026-03-01	2026-03-01	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2381	5	5-2026-03-01-1100	2026-03-01	2026-03-01	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2382	5	5-2026-03-01-1200	2026-03-01	2026-03-01	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2383	5	5-2026-03-01-1300	2026-03-01	2026-03-01	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2384	5	5-2026-03-01-1400	2026-03-01	2026-03-01	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2385	5	5-2026-03-01-1500	2026-03-01	2026-03-01	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2386	5	5-2026-03-01-1600	2026-03-01	2026-03-01	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2387	5	5-2026-03-01-1700	2026-03-01	2026-03-01	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2388	5	5-2026-03-02-1000	2026-03-02	2026-03-02	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2389	5	5-2026-03-02-1100	2026-03-02	2026-03-02	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2390	5	5-2026-03-02-1200	2026-03-02	2026-03-02	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2391	5	5-2026-03-02-1300	2026-03-02	2026-03-02	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2392	5	5-2026-03-02-1400	2026-03-02	2026-03-02	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2393	5	5-2026-03-02-1500	2026-03-02	2026-03-02	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2394	5	5-2026-03-02-1600	2026-03-02	2026-03-02	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2395	5	5-2026-03-02-1700	2026-03-02	2026-03-02	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2396	5	5-2026-03-03-1000	2026-03-03	2026-03-03	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2397	5	5-2026-03-03-1100	2026-03-03	2026-03-03	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2398	5	5-2026-03-03-1200	2026-03-03	2026-03-03	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2399	5	5-2026-03-03-1300	2026-03-03	2026-03-03	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2400	5	5-2026-03-03-1400	2026-03-03	2026-03-03	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2401	5	5-2026-03-03-1500	2026-03-03	2026-03-03	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2402	5	5-2026-03-03-1600	2026-03-03	2026-03-03	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2403	5	5-2026-03-03-1700	2026-03-03	2026-03-03	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2404	5	5-2026-03-04-1000	2026-03-04	2026-03-04	10:00:00	13:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2405	5	5-2026-03-04-1100	2026-03-04	2026-03-04	11:00:00	14:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2406	5	5-2026-03-04-1200	2026-03-04	2026-03-04	12:00:00	15:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2407	5	5-2026-03-04-1300	2026-03-04	2026-03-04	13:00:00	16:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2408	5	5-2026-03-04-1400	2026-03-04	2026-03-04	14:00:00	17:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2409	5	5-2026-03-04-1500	2026-03-04	2026-03-04	15:00:00	18:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2410	5	5-2026-03-04-1600	2026-03-04	2026-03-04	16:00:00	19:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
+2411	5	5-2026-03-04-1700	2026-03-04	2026-03-04	17:00:00	20:00:00	300	0.00	t	2025-12-04 06:30:14.676338+00	2025-12-04 06:30:14.676338+00
 \.
 
 
 --
--- TOC entry 4122 (class 0 OID 19407)
+-- TOC entry 4138 (class 0 OID 19407)
 -- Dependencies: 287
 -- Data for Name: combos; Type: TABLE DATA; Schema: public; Owner: root
 --
 
-COPY public.combos (combo_id, attraction_1_id, attraction_2_id, combo_price, discount_percent, active, created_at, updated_at, name, attraction_ids, attraction_prices, total_price, image_url, create_slots) FROM stdin;
-4	\N	\N	\N	0.00	t	2025-11-29 12:29:22.917397+00	2025-12-03 06:38:02.94619+00	Snow city + Madlabs + Eyelusion	{1,2,3}	{"1": 500, "2": 400, "3": 300}	1200.00	/uploads/2025/12/03/1764743878299_ez6x3g3it67.webp	t
-1	1	2	850.00	0.00	t	2025-11-28 11:40:36.40424+00	2025-12-03 06:38:19.99401+00	Snowcity + MadLabs	{1,2}	{"1": 425, "2": 425}	850.00	/uploads/2025/12/03/1764743897470_beyvh324a67.webp	t
+COPY public.combos (combo_id, attraction_1_id, attraction_2_id, combo_price, discount_percent, active, created_at, updated_at, name, attraction_ids, attraction_prices, total_price, image_url, create_slots, desktop_image_url) FROM stdin;
+5	\N	\N	\N	0.00	t	2025-12-04 06:30:11.926805+00	2025-12-10 11:23:03.995907+00	Madlabs+Eyelusion+SnowCity	{3,2,1}	{"1": 500, "2": 350, "3": 350}	1200.00	/uploads/2025/12/04/1764829770291_4tjdj0h06qn.webp	t	\N
+1	1	2	850.00	0.00	t	2025-11-28 11:40:36.40424+00	2025-12-10 11:23:32.9591+00	Snowcity + MadLabs	{1,2}	{"1": 425, "2": 425}	850.00	/uploads/2025/12/03/1764743897470_beyvh324a67.webp	t	\N
 \.
 
 
 --
--- TOC entry 4102 (class 0 OID 19145)
+-- TOC entry 4118 (class 0 OID 19145)
 -- Dependencies: 267
 -- Data for Name: coupons; Type: TABLE DATA; Schema: public; Owner: root
 --
 
 COPY public.coupons (coupon_id, code, description, type, value, attraction_id, min_amount, valid_from, valid_to, active, created_at, updated_at) FROM stdin;
+1	100SNOW		flat	100.00	\N	0.00	2025-12-04	2025-12-30	t	2025-12-05 11:21:24.461804+00	2025-12-10 11:26:05.632773+00
 \.
 
 
 --
--- TOC entry 4086 (class 0 OID 18849)
+-- TOC entry 4102 (class 0 OID 18849)
 -- Dependencies: 251
 -- Data for Name: gallery_items; Type: TABLE DATA; Schema: public; Owner: root
 --
 
 COPY public.gallery_items (gallery_item_id, media_type, url, title, description, target_type, target_ref_id, active, created_at, updated_at) FROM stdin;
+1	image	/uploads/2025/12/11/1765456309073_r8hf6tu5hpp.webp	moments		none	\N	t	2025-12-11 12:32:11.684801+00	2025-12-11 12:32:11.684801+00
+2	image	/uploads/2025/12/11/1765457716355_qfcbwju8x8e.png	4-1-100x100.png		none	\N	t	2025-12-11 12:55:17.900317+00	2025-12-11 12:55:17.900317+00
+3	image	/uploads/2025/12/11/1765457718617_sbukmvt9o8.jpg	6-150x150.jpg		none	\N	t	2025-12-11 12:55:19.637536+00	2025-12-11 12:55:19.637536+00
+4	image	/uploads/2025/12/11/1765457720473_3dmhgr65xzz.webp	6-300x195.jpg.webp		none	\N	t	2025-12-11 12:55:21.658834+00	2025-12-11 12:55:21.658834+00
+5	image	/uploads/2025/12/11/1765457722983_xj464hnc3d.jpg	11-570x570.jpg		none	\N	t	2025-12-11 12:55:24.110102+00	2025-12-11 12:55:24.110102+00
+6	image	/uploads/2025/12/11/1765457725279_wg79en11gli.jpg	DSC_0059-768x512.jpg		none	\N	t	2025-12-11 12:55:26.224451+00	2025-12-11 12:55:26.224451+00
+7	image	/uploads/2025/12/11/1765457727874_cwjgwbes6jf.jpg	DSC_0067-1024x682.jpg		none	\N	t	2025-12-11 12:55:28.858544+00	2025-12-11 12:55:28.858544+00
+8	image	/uploads/2025/12/11/1765457730170_jb1s0ii9769.webp	DSC_0071-1024x682.jpg.webp		none	\N	t	2025-12-11 12:55:31.033912+00	2025-12-11 12:55:31.033912+00
+9	image	/uploads/2025/12/11/1765457731877_f9ejmlu7cwv.jpg	e0b81ae1-8bc5-45a4-a9d3-81754b15fd13-1024x577-1-510x287.jpg		none	\N	t	2025-12-11 12:55:32.790905+00	2025-12-11 12:55:32.790905+00
+10	image	/uploads/2025/12/11/1765457733611_730vjm30cm5.jpg	iP0l71619502801-150x150.jpg		none	\N	t	2025-12-11 12:55:34.4799+00	2025-12-11 12:55:34.4799+00
+11	image	/uploads/2025/12/11/1765457736679_vpt5yrs6uoq.jpg	Madlabs_-1536x768.jpg		none	\N	t	2025-12-11 12:55:37.554066+00	2025-12-11 12:55:37.554066+00
+12	image	/uploads/2025/12/11/1765457738232_l0lpsxgrks.jpg	snow-city-150x150.jpeg		none	\N	t	2025-12-11 12:55:39.14688+00	2025-12-11 12:55:39.14688+00
+13	image	/uploads/2025/12/11/1765457995777_yqiadedh2dm.webp	2-1.webp		none	\N	t	2025-12-11 12:59:56.634615+00	2025-12-11 12:59:56.634615+00
 \.
 
 
 --
--- TOC entry 4116 (class 0 OID 19297)
+-- TOC entry 4132 (class 0 OID 19297)
 -- Dependencies: 281
 -- Data for Name: happy_hours; Type: TABLE DATA; Schema: public; Owner: root
 --
@@ -3514,7 +4406,7 @@ COPY public.happy_hours (hh_id, attraction_id, start_time, end_time, discount_pe
 
 
 --
--- TOC entry 4114 (class 0 OID 19283)
+-- TOC entry 4130 (class 0 OID 19283)
 -- Dependencies: 279
 -- Data for Name: holidays; Type: TABLE DATA; Schema: public; Owner: root
 --
@@ -3524,7 +4416,7 @@ COPY public.holidays (holiday_id, holiday_date, description, created_at, updated
 
 
 --
--- TOC entry 4104 (class 0 OID 19177)
+-- TOC entry 4120 (class 0 OID 19177)
 -- Dependencies: 269
 -- Data for Name: media_files; Type: TABLE DATA; Schema: public; Owner: root
 --
@@ -3541,11 +4433,37 @@ COPY public.media_files (media_id, url_path, relative_path, filename, size, mime
 9	/uploads/2025/11/29/1764419208424_grw9o5ppifk.webp	2025/11/29/1764419208424_grw9o5ppifk.webp	1764419208424_grw9o5ppifk.webp	19325	image/webp		2025-11-29 12:26:48.037858+00
 10	/uploads/2025/12/03/1764743878299_ez6x3g3it67.webp	2025/12/03/1764743878299_ez6x3g3it67.webp	1764743878299_ez6x3g3it67.webp	40671	image/webp		2025-12-03 06:37:58.313328+00
 11	/uploads/2025/12/03/1764743897470_beyvh324a67.webp	2025/12/03/1764743897470_beyvh324a67.webp	1764743897470_beyvh324a67.webp	40671	image/webp		2025-12-03 06:38:17.475374+00
+12	/uploads/2025/12/03/1764757912237_m8xkaa2r9t.png	2025/12/03/1764757912237_m8xkaa2r9t.png	1764757912237_m8xkaa2r9t.png	8265	image/png		2025-12-03 10:31:52.025655+00
+13	/uploads/2025/12/04/1764829770291_4tjdj0h06qn.webp	2025/12/04/1764829770291_4tjdj0h06qn.webp	1764829770291_4tjdj0h06qn.webp	39793	image/webp		2025-12-04 06:29:30.676136+00
+14	/uploads/2025/12/10/1765354733210_m0izxwbu95.webp	2025/12/10/1765354733210_m0izxwbu95.webp	1765354733210_m0izxwbu95.webp	112348	image/webp		2025-12-10 08:18:52.835603+00
+15	/uploads/2025/12/10/1765365566638_65a7lhbqrll.webp	2025/12/10/1765365566638_65a7lhbqrll.webp	1765365566638_65a7lhbqrll.webp	166158	image/webp		2025-12-10 11:19:26.08898+00
+16	/uploads/2025/12/10/1765365631993_t2qfy8fhu2g.webp	2025/12/10/1765365631993_t2qfy8fhu2g.webp	1765365631993_t2qfy8fhu2g.webp	41088	image/webp		2025-12-10 11:20:31.435888+00
+17	/uploads/2025/12/10/1765365773484_f57y2qpsmme.webp	2025/12/10/1765365773484_f57y2qpsmme.webp	1765365773484_f57y2qpsmme.webp	112348	image/webp		2025-12-10 11:22:52.924897+00
+18	/uploads/2025/12/10/1765365810722_tw94vo209ns.webp	2025/12/10/1765365810722_tw94vo209ns.webp	1765365810722_tw94vo209ns.webp	202927	image/webp		2025-12-10 11:23:30.164697+00
+19	/uploads/2025/12/10/1765365844624_7qwrli5hn2p.webp	2025/12/10/1765365844624_7qwrli5hn2p.webp	1765365844624_7qwrli5hn2p.webp	112348	image/webp		2025-12-10 11:24:04.061627+00
+20	/uploads/2025/12/11/1765456309073_r8hf6tu5hpp.webp	2025/12/11/1765456309073_r8hf6tu5hpp.webp	1765456309073_r8hf6tu5hpp.webp	153604	image/webp		2025-12-11 12:31:49.160036+00
+21	/uploads/2025/12/11/1765457716355_qfcbwju8x8e.png	2025/12/11/1765457716355_qfcbwju8x8e.png	1765457716355_qfcbwju8x8e.png	2796	image/png		2025-12-11 12:55:16.647423+00
+22	/uploads/2025/12/11/1765457718617_sbukmvt9o8.jpg	2025/12/11/1765457718617_sbukmvt9o8.jpg	1765457718617_sbukmvt9o8.jpg	4297	image/jpeg		2025-12-11 12:55:18.739538+00
+23	/uploads/2025/12/11/1765457720473_3dmhgr65xzz.webp	2025/12/11/1765457720473_3dmhgr65xzz.webp	1765457720473_3dmhgr65xzz.webp	8441	image/webp		2025-12-11 12:55:20.693903+00
+24	/uploads/2025/12/11/1765457722983_xj464hnc3d.jpg	2025/12/11/1765457722983_xj464hnc3d.jpg	1765457722983_xj464hnc3d.jpg	33402	image/jpeg		2025-12-11 12:55:23.165624+00
+25	/uploads/2025/12/11/1765457725279_wg79en11gli.jpg	2025/12/11/1765457725279_wg79en11gli.jpg	1765457725279_wg79en11gli.jpg	56553	image/jpeg		2025-12-11 12:55:25.36806+00
+26	/uploads/2025/12/11/1765457727874_cwjgwbes6jf.jpg	2025/12/11/1765457727874_cwjgwbes6jf.jpg	1765457727874_cwjgwbes6jf.jpg	127948	image/jpeg		2025-12-11 12:55:27.965586+00
+27	/uploads/2025/12/11/1765457730170_jb1s0ii9769.webp	2025/12/11/1765457730170_jb1s0ii9769.webp	1765457730170_jb1s0ii9769.webp	70984	image/webp		2025-12-11 12:55:30.257973+00
+28	/uploads/2025/12/11/1765457731877_f9ejmlu7cwv.jpg	2025/12/11/1765457731877_f9ejmlu7cwv.jpg	1765457731877_f9ejmlu7cwv.jpg	23485	image/jpeg		2025-12-11 12:55:31.96864+00
+29	/uploads/2025/12/11/1765457733611_730vjm30cm5.jpg	2025/12/11/1765457733611_730vjm30cm5.jpg	1765457733611_730vjm30cm5.jpg	7871	image/jpeg		2025-12-11 12:55:33.700895+00
+30	/uploads/2025/12/11/1765457736679_vpt5yrs6uoq.jpg	2025/12/11/1765457736679_vpt5yrs6uoq.jpg	1765457736679_vpt5yrs6uoq.jpg	188330	image/jpeg		2025-12-11 12:55:36.767415+00
+31	/uploads/2025/12/11/1765457738232_l0lpsxgrks.jpg	2025/12/11/1765457738232_l0lpsxgrks.jpg	1765457738232_l0lpsxgrks.jpg	6828	image/jpeg		2025-12-11 12:55:38.321874+00
+32	/uploads/2025/12/11/1765457880975_6q2h3yk38ub.webp	2025/12/11/1765457880975_6q2h3yk38ub.webp	1765457880975_6q2h3yk38ub.webp	122029	image/webp		2025-12-11 12:58:01.064429+00
+33	/uploads/2025/12/11/1765457894269_vy5vhv1gsj.webp	2025/12/11/1765457894269_vy5vhv1gsj.webp	1765457894269_vy5vhv1gsj.webp	122029	image/webp		2025-12-11 12:58:14.357271+00
+34	/uploads/2025/12/11/1765457901772_asaivm585x.webp	2025/12/11/1765457901772_asaivm585x.webp	1765457901772_asaivm585x.webp	122029	image/webp		2025-12-11 12:58:21.913678+00
+35	/uploads/2025/12/11/1765457995777_yqiadedh2dm.webp	2025/12/11/1765457995777_yqiadedh2dm.webp	1765457995777_yqiadedh2dm.webp	129170	image/webp		2025-12-11 12:59:55.86546+00
+36	/uploads/2025/12/11/1765458837679_uy711qwxvq.jpg	2025/12/11/1765458837679_uy711qwxvq.jpg	1765458837679_uy711qwxvq.jpg	200697	image/jpeg		2025-12-11 13:13:57.767393+00
+37	/uploads/2025/12/11/1765458890871_3sox0q3aaqg.jpg	2025/12/11/1765458890871_3sox0q3aaqg.jpg	1765458890871_3sox0q3aaqg.jpg	200697	image/jpeg		2025-12-11 13:14:50.959891+00
 \.
 
 
 --
--- TOC entry 4112 (class 0 OID 19256)
+-- TOC entry 4128 (class 0 OID 19256)
 -- Dependencies: 277
 -- Data for Name: notifications; Type: TABLE DATA; Schema: public; Owner: root
 --
@@ -3555,40 +4473,45 @@ COPY public.notifications (notification_id, user_id, booking_id, channel, status
 
 
 --
--- TOC entry 4080 (class 0 OID 18766)
+-- TOC entry 4096 (class 0 OID 18766)
 -- Dependencies: 245
 -- Data for Name: offer_rules; Type: TABLE DATA; Schema: public; Owner: root
 --
 
-COPY public.offer_rules (rule_id, offer_id, target_type, target_id, applies_to_all, date_from, date_to, time_from, time_to, slot_type, slot_id, rule_discount_type, rule_discount_value, priority, created_at, updated_at) FROM stdin;
+COPY public.offer_rules (rule_id, offer_id, target_type, target_id, applies_to_all, date_from, date_to, time_from, time_to, slot_type, slot_id, rule_discount_type, rule_discount_value, priority, created_at, updated_at, day_type, specific_days, is_holiday, specific_date, specific_time) FROM stdin;
+20	3	attraction	1	f	2025-12-04	2025-12-31	10:00:00	13:00:00	\N	\N	amount	250.00	10000	2025-12-05 08:30:00.737528+00	2025-12-05 08:30:00.737528+00	custom	{1,2,4,5,3}	f	\N	\N
 \.
 
 
 --
--- TOC entry 4078 (class 0 OID 18746)
+-- TOC entry 4094 (class 0 OID 18746)
 -- Dependencies: 243
 -- Data for Name: offers; Type: TABLE DATA; Schema: public; Owner: root
 --
 
 COPY public.offers (offer_id, title, description, image_url, rule_type, discount_type, discount_value, max_discount, valid_from, valid_to, active, created_at, updated_at) FROM stdin;
+3	happyhours			happy_hour	amount	250.00	\N	2025-12-04	2025-12-31	t	2025-12-04 10:54:37.449652+00	2025-12-05 08:30:00.499947+00
 \.
 
 
 --
--- TOC entry 4090 (class 0 OID 18896)
+-- TOC entry 4106 (class 0 OID 18896)
 -- Dependencies: 255
 -- Data for Name: orders; Type: TABLE DATA; Schema: public; Owner: root
 --
 
 COPY public.orders (order_id, order_ref, user_id, total_amount, discount_amount, payment_status, payment_mode, payment_ref, payment_txn_no, coupon_code, created_at, updated_at) FROM stdin;
 1	ORD2025112895158f	3	1500.00	0.00	Completed	Online	R41c51923-6aa1-4a0a-8e1b-b30d12f94f3c	\N	\N	2025-11-28 12:06:28.485718+00	2025-11-28 12:07:50.249605+00
+102	ORD2025121196b7a5	3	1500.00	0.00	Completed	Online	R3dbcb72e-581b-4373-b700-2ad105b4d5d8	\N	\N	2025-12-11 12:21:21.556329+00	2025-12-11 12:22:22.821092+00
 2	ORD20251128498fe7	3	1000.00	0.00	Completed	Online	R6337f7f1-5beb-44a4-be00-76531696bbcc	\N	\N	2025-11-28 13:06:02.81135+00	2025-11-28 13:06:59.278924+00
 15	ORD2025112938dfca	3	1500.00	0.00	Completed	Online	R76fca161-50f3-46ea-903a-e2454503e387	\N	\N	2025-11-29 10:11:06.988885+00	2025-11-29 10:12:17.613881+00
 3	ORD20251129a806b7	3	2350.00	0.00	Completed	Online	R2e551bc8-365c-4837-b379-339822f069e6	\N	\N	2025-11-29 07:46:36.456974+00	2025-11-29 07:47:33.638187+00
+24	ORD202512037c41be	3	2700.00	0.00	Completed	Online	R25cac27f-9e86-4b4b-82fe-ec4df19e18e5	\N	\N	2025-12-03 08:19:07.480882+00	2025-12-03 08:20:00.344878+00
 4	ORD20251129f3386c	3	1700.00	0.00	Completed	Online	R8ac1c0a5-2040-410b-a8a6-17323c8996b4	\N	\N	2025-11-29 07:56:26.021288+00	2025-11-29 07:57:23.742894+00
 16	ORD20251129f0856f	3	850.00	0.00	Completed	Online	R58ebc98c-8f73-412d-83fb-7fe5b42f5745	\N	\N	2025-11-29 10:22:28.6309+00	2025-11-29 10:23:54.546326+00
 5	ORD202511293bf09e	3	850.00	0.00	Completed	Online	Rbff931cb-1904-4e78-a4d2-35a470eedae1	\N	\N	2025-11-29 08:03:28.451148+00	2025-11-29 08:04:21.753251+00
 6	ORD20251129829cf6	3	1700.00	0.00	Completed	Online	R64d5052b-7e3e-444f-bfe7-e092591a729b	\N	\N	2025-11-29 08:10:19.409271+00	2025-11-29 08:11:13.879308+00
+101	ORD20251211e6e04e	3	1000.00	100.00	Completed	Online	R8172fe11-a60e-40d0-8186-1987d81bf238	\N	100SNOW	2025-12-11 12:15:26.368509+00	2025-12-11 12:16:21.10384+00
 7	ORD202511299ff7f4	3	750.00	0.00	Completed	Online	R164698a5-6c22-4999-a600-119f2218b77e	\N	\N	2025-11-29 08:13:29.816721+00	2025-11-29 08:14:21.746199+00
 17	ORD202511294a9cda	3	1000.00	0.00	Completed	Online	R9c5a0435-f992-4114-8535-b4cefb73ff60	\N	\N	2025-11-29 10:29:24.275478+00	2025-11-29 10:30:18.375565+00
 8	ORD20251129fb7732	3	1000.00	0.00	Completed	Online	Rccf1d9f2-c9f8-4471-89ae-94c6ed1c6548	\N	\N	2025-11-29 08:43:06.404024+00	2025-11-29 08:44:01.767712+00
@@ -3596,6 +4519,8 @@ COPY public.orders (order_id, order_ref, user_id, total_amount, discount_amount,
 18	ORD20251129acee6f	3	1500.00	0.00	Completed	Online	R3f4af05c-76dc-429c-bf34-d6433c75ea12	\N	\N	2025-11-29 10:43:07.19553+00	2025-11-29 10:44:24.586272+00
 10	ORD20251129ce72fc	3	750.00	0.00	Completed	Online	Rf347702c-5572-4be6-9060-7fe04223c58a	\N	\N	2025-11-29 08:56:40.41078+00	2025-11-29 08:57:33.8689+00
 11	ORD2025112908964b	3	2600.00	0.00	Completed	Online	R4a13160a-7a44-469c-9156-ddc8b6ce44b9	\N	\N	2025-11-29 09:09:25.97432+00	2025-11-29 09:10:23.494444+00
+103	ORD202512113f1c23	13	300.00	0.00	Completed	Online	Ra1f1f2a5-aa2b-467b-99da-65a778b1c875	\N	\N	2025-12-11 13:45:09.451133+00	2025-12-11 13:46:14.975112+00
+104	ORD202512118fbe53	3	800.00	100.00	Completed	Online	R92da1b71-15db-42b7-9842-9fec6b980c82	\N	100SNOW	2025-12-11 13:52:16.789803+00	2025-12-11 13:53:33.518344+00
 12	ORD202511296f977f	3	2500.00	0.00	Completed	Online	R342313dc-fda2-4dc9-b812-ec0b3a859b77	\N	\N	2025-11-29 09:20:34.354901+00	2025-11-29 09:21:52.008435+00
 13	ORD20251129aa1d2b	3	3200.00	0.00	Completed	Online	R619841a3-fff6-45b0-9251-86f5e3043db7	\N	\N	2025-11-29 09:31:20.01475+00	2025-11-29 09:32:28.982408+00
 19	ORD2025112949f80c	3	1500.00	0.00	Completed	Online	R292c9c53-654e-4b9a-bcdf-751807467c52	\N	\N	2025-11-29 10:49:36.906121+00	2025-11-29 10:50:47.666096+00
@@ -3603,11 +4528,27 @@ COPY public.orders (order_id, order_ref, user_id, total_amount, discount_amount,
 21	ORD20251129631f08	3	750.00	0.00	Completed	Online	R48c06cd0-256a-48e4-b4ee-e5987509d3d7	\N	\N	2025-11-29 10:57:49.167875+00	2025-11-29 11:01:27.018477+00
 22	ORD20251129544579	3	2500.00	0.00	Completed	Online	R144f6b36-5a2f-4777-b481-e310e554bb1d	\N	\N	2025-11-29 11:03:37.359682+00	2025-11-29 11:04:47.252456+00
 23	ORD20251203fbb522	3	1500.00	0.00	Completed	Online	R4d2a5dd9-1552-4ff9-8786-58707c1b137e	\N	\N	2025-12-03 06:21:10.039028+00	2025-12-03 06:22:07.773841+00
+44	ORD202512046bebbd	3	2400.00	0.00	Completed	Online	Rcb993b74-9dd3-4b77-b20c-1130e9208b00	\N	\N	2025-12-04 07:11:28.263998+00	2025-12-04 07:12:21.068212+00
+42	ORD20251204cd6417	3	2400.00	0.00	Completed	Online	R1706d820-0c9d-491b-be11-5b0e08c3e652	\N	\N	2025-12-04 06:48:34.440513+00	2025-12-04 06:49:35.868441+00
+43	ORD2025120430b00f	3	1950.00	0.00	Completed	Online	R7f819e1d-189d-4403-bbb1-2194f897087e	\N	\N	2025-12-04 07:03:57.163655+00	2025-12-04 07:04:52.105807+00
+45	ORD2025120480dfc7	3	1200.00	0.00	Completed	Online	Rc5f07867-c30a-4c56-ae90-0bc23c3eb984	\N	\N	2025-12-04 07:26:13.940701+00	2025-12-04 07:27:13.440298+00
+46	ORD20251204dfe9c0	3	600.00	0.00	Completed	Online	Re960e004-1525-4a91-8d00-d02802d9ad90	\N	\N	2025-12-04 12:39:09.292527+00	2025-12-04 12:40:04.834566+00
+66	ORD2025120862d117	3	1500.00	500.00	Completed	Online	R2872ad07-81f1-4865-a78f-ecda3acf0e9f	\N	\N	2025-12-08 06:06:34.586741+00	2025-12-08 06:10:21.536061+00
+69	ORD202512086b8052	3	1000.00	0.00	Completed	Online	R5927ada8-a721-41fe-b901-7d5d7289ce0f	\N	\N	2025-12-08 11:12:44.371879+00	2025-12-08 11:13:48.413783+00
+67	ORD20251208b3501e	3	1500.00	500.00	Completed	Online	Rb494834c-6f18-402d-9fa6-b3907749ede9	\N	\N	2025-12-08 10:48:05.657593+00	2025-12-08 10:55:49.824391+00
+68	ORD202512089770a2	3	1500.00	500.00	Completed	Online	R0d9079ea-710f-4b30-ab12-494babeabb94	\N	\N	2025-12-08 10:57:10.113981+00	2025-12-08 10:58:06.406599+00
+81	ORD202512091508f9	3	1500.00	500.00	Completed	Online	Rb6f3e34d-4ffe-408a-a070-1889aebe2adc	\N	\N	2025-12-09 11:53:38.651133+00	2025-12-09 11:54:32.428809+00
+70	ORD20251208f089f9	3	600.00	0.00	Completed	Online	Ra4a31440-e804-46f7-8f29-afed209ee1f2	\N	\N	2025-12-08 11:24:33.476769+00	2025-12-08 11:25:40.683347+00
+88	ORD202512107d2c13	13	300.00	0.00	Completed	Online	R87e2e908-9951-4aa7-83f6-9bcc04112394	\N	\N	2025-12-10 16:40:53.477913+00	2025-12-10 16:42:08.023387+00
+82	ORD20251210e6fb66	3	300.00	0.00	Completed	Online	R4fe97eb3-87f6-4372-970d-74d23e378eb8	\N	\N	2025-12-10 10:50:27.571294+00	2025-12-10 10:51:23.018715+00
+85	ORD20251210bcb9b8	12	850.00	100.00	Completed	Online	R378895d1-edcd-4e02-aba7-66e3f2861093	\N	100SNOW	2025-12-10 12:46:48.442061+00	2025-12-10 12:48:11.562694+00
+84	ORD20251210510a12	3	1600.00	100.00	Completed	Online	Radfe099b-ae7a-4a18-8528-ecf7be9877a4	\N	100SNOW	2025-12-10 12:22:51.180212+00	2025-12-10 12:23:51.431103+00
+87	ORD20251210a499b6	3	1600.00	100.00	Completed	Online	R139bb897-dee8-4950-94a2-1987c79464d6	\N	100SNOW	2025-12-10 14:04:07.515893+00	2025-12-10 14:05:05.484869+00
 \.
 
 
 --
--- TOC entry 4120 (class 0 OID 19358)
+-- TOC entry 4136 (class 0 OID 19358)
 -- Dependencies: 285
 -- Data for Name: payment_txn_logs; Type: TABLE DATA; Schema: public; Owner: root
 --
@@ -3617,7 +4558,7 @@ COPY public.payment_txn_logs (txn_id, booking_id, cart_id, payment_ref, payment_
 
 
 --
--- TOC entry 4062 (class 0 OID 18512)
+-- TOC entry 4078 (class 0 OID 18512)
 -- Dependencies: 227
 -- Data for Name: permissions; Type: TABLE DATA; Schema: public; Owner: root
 --
@@ -3680,7 +4621,7 @@ COPY public.permissions (permission_id, permission_key, description, created_at,
 
 
 --
--- TOC entry 4064 (class 0 OID 18529)
+-- TOC entry 4080 (class 0 OID 18529)
 -- Dependencies: 229
 -- Data for Name: role_permissions; Type: TABLE DATA; Schema: public; Owner: root
 --
@@ -3759,7 +4700,7 @@ COPY public.role_permissions (id, role_id, permission_id, created_at, updated_at
 
 
 --
--- TOC entry 4060 (class 0 OID 18495)
+-- TOC entry 4076 (class 0 OID 18495)
 -- Dependencies: 225
 -- Data for Name: roles; Type: TABLE DATA; Schema: public; Owner: root
 --
@@ -3768,11 +4709,12 @@ COPY public.roles (role_id, role_name, description, created_at, updated_at) FROM
 1	admin	Full admin access to all dashboard modules	2025-11-28 11:14:24.512069+00	2025-11-28 11:14:24.512069+00
 2	sub_admin	Limited admin access for specific modules	2025-11-28 11:14:24.512069+00	2025-11-28 11:14:24.512069+00
 3	user	Normal user with basic access	2025-11-28 11:14:24.512069+00	2025-11-28 11:14:24.512069+00
+4	subadmin	subadmin role	2025-12-09 06:12:29.22355+00	2025-12-09 06:12:29.22355+00
 \.
 
 
 --
--- TOC entry 4108 (class 0 OID 19224)
+-- TOC entry 4124 (class 0 OID 19224)
 -- Dependencies: 273
 -- Data for Name: settings; Type: TABLE DATA; Schema: public; Owner: root
 --
@@ -3782,7 +4724,7 @@ COPY public.settings (setting_id, key_name, key_value, created_at, updated_at) F
 
 
 --
--- TOC entry 4066 (class 0 OID 18554)
+-- TOC entry 4082 (class 0 OID 18554)
 -- Dependencies: 231
 -- Data for Name: user_roles; Type: TABLE DATA; Schema: public; Owner: root
 --
@@ -3792,34 +4734,40 @@ COPY public.user_roles (id, user_id, role_id, created_at, updated_at) FROM stdin
 2	2	2	2025-11-28 11:14:24.512069+00	2025-11-28 11:14:24.512069+00
 3	3	3	2025-11-28 12:06:17.293233+00	2025-11-28 12:06:17.293233+00
 4	4	1	2025-11-28 12:30:54.753511+00	2025-11-28 12:30:54.753511+00
+5	11	4	2025-12-09 06:12:29.22355+00	2025-12-09 06:12:29.22355+00
+6	12	3	2025-12-10 12:42:04.522521+00	2025-12-10 12:42:04.522521+00
+7	13	3	2025-12-10 16:40:35.354466+00	2025-12-10 16:40:35.354466+00
 \.
 
 
 --
--- TOC entry 4058 (class 0 OID 18471)
+-- TOC entry 4074 (class 0 OID 18471)
 -- Dependencies: 223
 -- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: root
 --
 
 COPY public.users (user_id, name, email, phone, password_hash, otp_code, otp_expires_at, otp_verified, jwt_token, jwt_expires_at, last_login_at, last_ip, created_at, updated_at) FROM stdin;
 2	Sub Admin	subadmin@snowcity.local	\N	$2b$10$GnQdjWaPDl3mCLtPqejAx.CJyEHgcFz2U/BFgLrP/7gB7zeuT/GE6	\N	\N	t	\N	\N	\N	\N	2025-11-28 11:14:24.512069+00	2025-11-28 11:14:24.512069+00
-3	basteen	santhiyagubasteen@gmail.com	+919345318251	\N	\N	\N	t	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzIiwiZW1haWwiOiJzYW50aGl5YWd1YmFzdGVlbkBnbWFpbC5jb20iLCJpYXQiOjE3NjQzMzE1ODQsImV4cCI6MTc2NDkzNjM4NH0.umYJ1AIpP-huRa-6kAwlZiSzbALQGFIqEfyh5VHm9F4	2025-12-05 12:06:24.028+00	2025-11-28 12:06:23.559127+00	\N	2025-11-28 12:06:17.293233+00	2025-11-28 12:06:23.655998+00
+11	bas	Bast@gmail.com	\N	$2b$10$jf2ViAwpL8XeNIGfYIiECOWZmqMAbDS1E4IIVTE4wcKwP4qeHkXaa	\N	\N	f	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMSIsImVtYWlsIjoiQmFzdEBnbWFpbC5jb20iLCJpYXQiOjE3NjUyNjUwNzQsImV4cCI6MTc2NTg2OTg3NH0.yYg_OvYYvwZU1QWNiiBA_lts43OeQHODyGDpVSuNt6s	2025-12-16 07:24:34.61+00	2025-12-09 07:24:34.57105+00	\N	2025-12-09 06:12:29.22355+00	2025-12-09 07:24:34.57105+00
+1	Super Admin	admin@snowcity.local	\N	$2b$10$.U4Oq6zz79hnK81SPjKm5O.cm1BrTZgq3/b2zkK53h.a7mebOh2iW	\N	\N	t	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZW1haWwiOiJhZG1pbkBzbm93Y2l0eS5sb2NhbCIsImlhdCI6MTc2NTUxNTAyMywiZXhwIjoxNzY2MTE5ODIzfQ.zkEVyIIfbsZgPEXNZIx6iRKCEGGjw5xfkv0XyGopZ3I	2025-12-19 04:50:23.521+00	2025-12-12 04:50:23.779991+00	\N	2025-11-28 11:14:24.512069+00	2025-12-12 04:50:23.779991+00
+13	Abirami	abhisubhijeya@gmail.com	+918870736985	\N	\N	\N	t	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMyIsImVtYWlsIjoiYWJoaXN1YmhpamV5YUBnbWFpbC5jb20iLCJpYXQiOjE3NjUzODQ4NDgsImV4cCI6MTc2NTk4OTY0OH0.MhxpcTFUE67rlmk12G9s5gs-U2hVdD6BLMEIwe-gAd8	2025-12-17 16:40:48.359+00	2025-12-10 16:40:48.096665+00	\N	2025-12-10 16:40:35.354466+00	2025-12-10 16:40:48.447196+00
 4	Admin	basteen@gmail.com	\N	$2b$10$LBnwciL816hiOvB6lg0j4uEhqhq8t.1kq3YhTRriZ4i6OUqCh05ea	\N	\N	t	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0IiwiZW1haWwiOiJiYXN0ZWVuQGdtYWlsLmNvbSIsImlhdCI6MTc2NDMzMzc2NiwiZXhwIjoxNzY0OTM4NTY2fQ.Tqebe4xDPQ9sKldQh8GMPHcPDN_g9fldH5FoK2_VzPM	2025-12-05 12:42:46.032+00	2025-11-28 12:42:45.666123+00	\N	2025-11-28 12:30:54.753511+00	2025-11-28 12:42:45.666123+00
-1	Super Admin	admin@snowcity.local	\N	$2b$10$.U4Oq6zz79hnK81SPjKm5O.cm1BrTZgq3/b2zkK53h.a7mebOh2iW	\N	\N	t	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZW1haWwiOiJhZG1pbkBzbm93Y2l0eS5sb2NhbCIsImlhdCI6MTc2NDMzNDA3MCwiZXhwIjoxNzY0OTM4ODcwfQ.DvE6gX60lJNmGBg32EmhB1LBAwHGy1bv1lbKOwMpcsE	2025-12-05 12:47:50.148+00	2025-11-28 12:47:49.778465+00	\N	2025-11-28 11:14:24.512069+00	2025-11-28 12:47:49.778465+00
+12	vishal	vishal@digitfellas.com	+919840620700	\N	\N	\N	t	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMiIsImVtYWlsIjoidmlzaGFsQGRpZ2l0ZmVsbGFzLmNvbSIsImlhdCI6MTc2NTM3MDU3NywiZXhwIjoxNzY1OTc1Mzc3fQ.fdu3qJa0HFBNi9ZIqXTn5yA24_QFQfAyetg-jJYIwXU	2025-12-17 12:42:57.238+00	2025-12-10 12:42:56.887621+00	\N	2025-12-10 12:42:04.522521+00	2025-12-10 12:42:57.390288+00
+3	basteen	santhiyagubasteen@gmail.com	+919345318251	\N	\N	\N	t	eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzIiwiZW1haWwiOiJzYW50aGl5YWd1YmFzdGVlbkBnbWFpbC5jb20iLCJpYXQiOjE3NjU0NjExMTYsImV4cCI6MTc2NjA2NTkxNn0.kI8lCKj1_mOVg0ThdRbxxMIVgn8T9xX6zsPgaK1v93Q	2025-12-18 13:51:56.186+00	2025-12-11 13:51:55.890193+00	\N	2025-11-28 12:06:17.293233+00	2025-12-11 13:51:56.365543+00
 \.
 
 
 --
--- TOC entry 4180 (class 0 OID 0)
+-- TOC entry 4202 (class 0 OID 0)
 -- Dependencies: 240
 -- Name: addons_addon_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
 
-SELECT pg_catalog.setval('public.addons_addon_id_seq', 1, false);
+SELECT pg_catalog.setval('public.addons_addon_id_seq', 3, true);
 
 
 --
--- TOC entry 4181 (class 0 OID 0)
+-- TOC entry 4203 (class 0 OID 0)
 -- Dependencies: 270
 -- Name: analytics_analytics_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
@@ -3828,7 +4776,7 @@ SELECT pg_catalog.setval('public.analytics_analytics_id_seq', 1, false);
 
 
 --
--- TOC entry 4182 (class 0 OID 0)
+-- TOC entry 4204 (class 0 OID 0)
 -- Dependencies: 274
 -- Name: api_logs_log_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
@@ -3837,7 +4785,7 @@ SELECT pg_catalog.setval('public.api_logs_log_id_seq', 1, false);
 
 
 --
--- TOC entry 4183 (class 0 OID 0)
+-- TOC entry 4205 (class 0 OID 0)
 -- Dependencies: 234
 -- Name: attraction_slots_slot_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
@@ -3846,7 +4794,7 @@ SELECT pg_catalog.setval('public.attraction_slots_slot_id_seq', 3738, true);
 
 
 --
--- TOC entry 4184 (class 0 OID 0)
+-- TOC entry 4206 (class 0 OID 0)
 -- Dependencies: 232
 -- Name: attractions_attraction_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
@@ -3855,7 +4803,7 @@ SELECT pg_catalog.setval('public.attractions_attraction_id_seq', 3, true);
 
 
 --
--- TOC entry 4185 (class 0 OID 0)
+-- TOC entry 4207 (class 0 OID 0)
 -- Dependencies: 252
 -- Name: banners_banner_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
@@ -3864,25 +4812,25 @@ SELECT pg_catalog.setval('public.banners_banner_id_seq', 3, true);
 
 
 --
--- TOC entry 4186 (class 0 OID 0)
+-- TOC entry 4208 (class 0 OID 0)
 -- Dependencies: 248
 -- Name: blogs_blog_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
 
-SELECT pg_catalog.setval('public.blogs_blog_id_seq', 1, false);
+SELECT pg_catalog.setval('public.blogs_blog_id_seq', 1, true);
 
 
 --
--- TOC entry 4187 (class 0 OID 0)
+-- TOC entry 4209 (class 0 OID 0)
 -- Dependencies: 258
 -- Name: booking_addons_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
 
-SELECT pg_catalog.setval('public.booking_addons_id_seq', 1, false);
+SELECT pg_catalog.setval('public.booking_addons_id_seq', 11, true);
 
 
 --
--- TOC entry 4188 (class 0 OID 0)
+-- TOC entry 4210 (class 0 OID 0)
 -- Dependencies: 282
 -- Name: booking_history_history_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
@@ -3891,25 +4839,25 @@ SELECT pg_catalog.setval('public.booking_history_history_id_seq', 1, false);
 
 
 --
--- TOC entry 4189 (class 0 OID 0)
+-- TOC entry 4211 (class 0 OID 0)
 -- Dependencies: 220
 -- Name: booking_ref_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
 
-SELECT pg_catalog.setval('public.booking_ref_seq', 30, true);
+SELECT pg_catalog.setval('public.booking_ref_seq', 163, true);
 
 
 --
--- TOC entry 4190 (class 0 OID 0)
+-- TOC entry 4212 (class 0 OID 0)
 -- Dependencies: 256
 -- Name: bookings_booking_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
 
-SELECT pg_catalog.setval('public.bookings_booking_id_seq', 30, true);
+SELECT pg_catalog.setval('public.bookings_booking_id_seq', 163, true);
 
 
 --
--- TOC entry 4191 (class 0 OID 0)
+-- TOC entry 4213 (class 0 OID 0)
 -- Dependencies: 264
 -- Name: cart_bookings_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
@@ -3918,7 +4866,7 @@ SELECT pg_catalog.setval('public.cart_bookings_id_seq', 1, false);
 
 
 --
--- TOC entry 4192 (class 0 OID 0)
+-- TOC entry 4214 (class 0 OID 0)
 -- Dependencies: 262
 -- Name: cart_items_cart_item_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
@@ -3927,7 +4875,7 @@ SELECT pg_catalog.setval('public.cart_items_cart_item_id_seq', 1, false);
 
 
 --
--- TOC entry 4193 (class 0 OID 0)
+-- TOC entry 4215 (class 0 OID 0)
 -- Dependencies: 221
 -- Name: cart_ref_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
@@ -3936,7 +4884,7 @@ SELECT pg_catalog.setval('public.cart_ref_seq', 1, false);
 
 
 --
--- TOC entry 4194 (class 0 OID 0)
+-- TOC entry 4216 (class 0 OID 0)
 -- Dependencies: 260
 -- Name: carts_cart_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
@@ -3945,61 +4893,61 @@ SELECT pg_catalog.setval('public.carts_cart_id_seq', 1, false);
 
 
 --
--- TOC entry 4195 (class 0 OID 0)
+-- TOC entry 4217 (class 0 OID 0)
 -- Dependencies: 246
 -- Name: cms_pages_page_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
 
-SELECT pg_catalog.setval('public.cms_pages_page_id_seq', 1, false);
+SELECT pg_catalog.setval('public.cms_pages_page_id_seq', 1, true);
 
 
 --
--- TOC entry 4196 (class 0 OID 0)
+-- TOC entry 4218 (class 0 OID 0)
 -- Dependencies: 236
 -- Name: combo_attractions_combo_attraction_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
 
-SELECT pg_catalog.setval('public.combo_attractions_combo_attraction_id_seq', 27, true);
+SELECT pg_catalog.setval('public.combo_attractions_combo_attraction_id_seq', 38, true);
 
 
 --
--- TOC entry 4197 (class 0 OID 0)
+-- TOC entry 4219 (class 0 OID 0)
 -- Dependencies: 238
 -- Name: combo_slots_combo_slot_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
 
-SELECT pg_catalog.setval('public.combo_slots_combo_slot_id_seq', 1683, true);
+SELECT pg_catalog.setval('public.combo_slots_combo_slot_id_seq', 2411, true);
 
 
 --
--- TOC entry 4198 (class 0 OID 0)
+-- TOC entry 4220 (class 0 OID 0)
 -- Dependencies: 286
 -- Name: combos_combo_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
 
-SELECT pg_catalog.setval('public.combos_combo_id_seq', 4, true);
+SELECT pg_catalog.setval('public.combos_combo_id_seq', 5, true);
 
 
 --
--- TOC entry 4199 (class 0 OID 0)
+-- TOC entry 4221 (class 0 OID 0)
 -- Dependencies: 266
 -- Name: coupons_coupon_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
 
-SELECT pg_catalog.setval('public.coupons_coupon_id_seq', 1, false);
+SELECT pg_catalog.setval('public.coupons_coupon_id_seq', 1, true);
 
 
 --
--- TOC entry 4200 (class 0 OID 0)
+-- TOC entry 4222 (class 0 OID 0)
 -- Dependencies: 250
 -- Name: gallery_items_gallery_item_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
 
-SELECT pg_catalog.setval('public.gallery_items_gallery_item_id_seq', 1, false);
+SELECT pg_catalog.setval('public.gallery_items_gallery_item_id_seq', 13, true);
 
 
 --
--- TOC entry 4201 (class 0 OID 0)
+-- TOC entry 4223 (class 0 OID 0)
 -- Dependencies: 280
 -- Name: happy_hours_hh_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
@@ -4008,7 +4956,7 @@ SELECT pg_catalog.setval('public.happy_hours_hh_id_seq', 1, false);
 
 
 --
--- TOC entry 4202 (class 0 OID 0)
+-- TOC entry 4224 (class 0 OID 0)
 -- Dependencies: 278
 -- Name: holidays_holiday_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
@@ -4017,16 +4965,16 @@ SELECT pg_catalog.setval('public.holidays_holiday_id_seq', 1, false);
 
 
 --
--- TOC entry 4203 (class 0 OID 0)
+-- TOC entry 4225 (class 0 OID 0)
 -- Dependencies: 268
 -- Name: media_files_media_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
 
-SELECT pg_catalog.setval('public.media_files_media_id_seq', 11, true);
+SELECT pg_catalog.setval('public.media_files_media_id_seq', 37, true);
 
 
 --
--- TOC entry 4204 (class 0 OID 0)
+-- TOC entry 4226 (class 0 OID 0)
 -- Dependencies: 276
 -- Name: notifications_notification_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
@@ -4035,34 +4983,34 @@ SELECT pg_catalog.setval('public.notifications_notification_id_seq', 1, false);
 
 
 --
--- TOC entry 4205 (class 0 OID 0)
+-- TOC entry 4227 (class 0 OID 0)
 -- Dependencies: 244
 -- Name: offer_rules_rule_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
 
-SELECT pg_catalog.setval('public.offer_rules_rule_id_seq', 1, false);
+SELECT pg_catalog.setval('public.offer_rules_rule_id_seq', 20, true);
 
 
 --
--- TOC entry 4206 (class 0 OID 0)
+-- TOC entry 4228 (class 0 OID 0)
 -- Dependencies: 242
 -- Name: offers_offer_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
 
-SELECT pg_catalog.setval('public.offers_offer_id_seq', 1, false);
+SELECT pg_catalog.setval('public.offers_offer_id_seq', 3, true);
 
 
 --
--- TOC entry 4207 (class 0 OID 0)
+-- TOC entry 4229 (class 0 OID 0)
 -- Dependencies: 254
 -- Name: orders_order_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
 
-SELECT pg_catalog.setval('public.orders_order_id_seq', 23, true);
+SELECT pg_catalog.setval('public.orders_order_id_seq', 104, true);
 
 
 --
--- TOC entry 4208 (class 0 OID 0)
+-- TOC entry 4230 (class 0 OID 0)
 -- Dependencies: 284
 -- Name: payment_txn_logs_txn_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
@@ -4071,7 +5019,7 @@ SELECT pg_catalog.setval('public.payment_txn_logs_txn_id_seq', 1, false);
 
 
 --
--- TOC entry 4209 (class 0 OID 0)
+-- TOC entry 4231 (class 0 OID 0)
 -- Dependencies: 226
 -- Name: permissions_permission_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
@@ -4080,7 +5028,7 @@ SELECT pg_catalog.setval('public.permissions_permission_id_seq', 53, true);
 
 
 --
--- TOC entry 4210 (class 0 OID 0)
+-- TOC entry 4232 (class 0 OID 0)
 -- Dependencies: 228
 -- Name: role_permissions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
@@ -4089,16 +5037,16 @@ SELECT pg_catalog.setval('public.role_permissions_id_seq', 69, true);
 
 
 --
--- TOC entry 4211 (class 0 OID 0)
+-- TOC entry 4233 (class 0 OID 0)
 -- Dependencies: 224
 -- Name: roles_role_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
 
-SELECT pg_catalog.setval('public.roles_role_id_seq', 3, true);
+SELECT pg_catalog.setval('public.roles_role_id_seq', 4, true);
 
 
 --
--- TOC entry 4212 (class 0 OID 0)
+-- TOC entry 4234 (class 0 OID 0)
 -- Dependencies: 272
 -- Name: settings_setting_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
@@ -4107,25 +5055,25 @@ SELECT pg_catalog.setval('public.settings_setting_id_seq', 1, false);
 
 
 --
--- TOC entry 4213 (class 0 OID 0)
+-- TOC entry 4235 (class 0 OID 0)
 -- Dependencies: 230
 -- Name: user_roles_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
 
-SELECT pg_catalog.setval('public.user_roles_id_seq', 4, true);
+SELECT pg_catalog.setval('public.user_roles_id_seq', 7, true);
 
 
 --
--- TOC entry 4214 (class 0 OID 0)
+-- TOC entry 4236 (class 0 OID 0)
 -- Dependencies: 222
 -- Name: users_user_id_seq; Type: SEQUENCE SET; Schema: public; Owner: root
 --
 
-SELECT pg_catalog.setval('public.users_user_id_seq', 5, true);
+SELECT pg_catalog.setval('public.users_user_id_seq', 13, true);
 
 
 --
--- TOC entry 3757 (class 2606 OID 18744)
+-- TOC entry 3768 (class 2606 OID 18744)
 -- Name: addons addons_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4134,7 +5082,16 @@ ALTER TABLE ONLY public.addons
 
 
 --
--- TOC entry 3816 (class 2606 OID 19214)
+-- TOC entry 3862 (class 2606 OID 19577)
+-- Name: admin_access admin_access_pk; Type: CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public.admin_access
+    ADD CONSTRAINT admin_access_pk PRIMARY KEY (user_id, resource_type, resource_id);
+
+
+--
+-- TOC entry 3827 (class 2606 OID 19214)
 -- Name: analytics analytics_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4143,7 +5100,7 @@ ALTER TABLE ONLY public.analytics
 
 
 --
--- TOC entry 3824 (class 2606 OID 19254)
+-- TOC entry 3835 (class 2606 OID 19254)
 -- Name: api_logs api_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4152,7 +5109,7 @@ ALTER TABLE ONLY public.api_logs
 
 
 --
--- TOC entry 3737 (class 2606 OID 18629)
+-- TOC entry 3748 (class 2606 OID 18629)
 -- Name: attraction_slots attraction_slots_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4161,7 +5118,7 @@ ALTER TABLE ONLY public.attraction_slots
 
 
 --
--- TOC entry 3733 (class 2606 OID 18604)
+-- TOC entry 3744 (class 2606 OID 18604)
 -- Name: attractions attractions_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4170,7 +5127,7 @@ ALTER TABLE ONLY public.attractions
 
 
 --
--- TOC entry 3735 (class 2606 OID 18606)
+-- TOC entry 3746 (class 2606 OID 18606)
 -- Name: attractions attractions_slug_key; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4179,7 +5136,7 @@ ALTER TABLE ONLY public.attractions
 
 
 --
--- TOC entry 3776 (class 2606 OID 18884)
+-- TOC entry 3787 (class 2606 OID 18884)
 -- Name: banners banners_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4188,7 +5145,7 @@ ALTER TABLE ONLY public.banners
 
 
 --
--- TOC entry 3768 (class 2606 OID 18844)
+-- TOC entry 3779 (class 2606 OID 18844)
 -- Name: blogs blogs_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4197,7 +5154,7 @@ ALTER TABLE ONLY public.blogs
 
 
 --
--- TOC entry 3770 (class 2606 OID 18846)
+-- TOC entry 3781 (class 2606 OID 18846)
 -- Name: blogs blogs_slug_key; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4206,7 +5163,7 @@ ALTER TABLE ONLY public.blogs
 
 
 --
--- TOC entry 3790 (class 2606 OID 19027)
+-- TOC entry 3801 (class 2606 OID 19027)
 -- Name: booking_addons booking_addons_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4215,7 +5172,7 @@ ALTER TABLE ONLY public.booking_addons
 
 
 --
--- TOC entry 3834 (class 2606 OID 19343)
+-- TOC entry 3845 (class 2606 OID 19343)
 -- Name: booking_history booking_history_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4224,7 +5181,7 @@ ALTER TABLE ONLY public.booking_history
 
 
 --
--- TOC entry 3784 (class 2606 OID 18966)
+-- TOC entry 3795 (class 2606 OID 18966)
 -- Name: bookings bookings_booking_ref_key; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4233,7 +5190,7 @@ ALTER TABLE ONLY public.bookings
 
 
 --
--- TOC entry 3786 (class 2606 OID 18964)
+-- TOC entry 3797 (class 2606 OID 18964)
 -- Name: bookings bookings_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4242,7 +5199,7 @@ ALTER TABLE ONLY public.bookings
 
 
 --
--- TOC entry 3806 (class 2606 OID 19131)
+-- TOC entry 3817 (class 2606 OID 19131)
 -- Name: cart_bookings cart_bookings_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4251,7 +5208,7 @@ ALTER TABLE ONLY public.cart_bookings
 
 
 --
--- TOC entry 3801 (class 2606 OID 19099)
+-- TOC entry 3812 (class 2606 OID 19099)
 -- Name: cart_items cart_items_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4260,7 +5217,7 @@ ALTER TABLE ONLY public.cart_items
 
 
 --
--- TOC entry 3794 (class 2606 OID 19069)
+-- TOC entry 3805 (class 2606 OID 19069)
 -- Name: carts carts_cart_ref_key; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4269,7 +5226,7 @@ ALTER TABLE ONLY public.carts
 
 
 --
--- TOC entry 3796 (class 2606 OID 19067)
+-- TOC entry 3807 (class 2606 OID 19067)
 -- Name: carts carts_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4278,7 +5235,7 @@ ALTER TABLE ONLY public.carts
 
 
 --
--- TOC entry 3763 (class 2606 OID 18818)
+-- TOC entry 3774 (class 2606 OID 18818)
 -- Name: cms_pages cms_pages_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4287,7 +5244,7 @@ ALTER TABLE ONLY public.cms_pages
 
 
 --
--- TOC entry 3765 (class 2606 OID 18820)
+-- TOC entry 3776 (class 2606 OID 18820)
 -- Name: cms_pages cms_pages_slug_key; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4296,7 +5253,7 @@ ALTER TABLE ONLY public.cms_pages
 
 
 --
--- TOC entry 3743 (class 2606 OID 18679)
+-- TOC entry 3754 (class 2606 OID 18679)
 -- Name: combo_attractions combo_attractions_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4305,7 +5262,7 @@ ALTER TABLE ONLY public.combo_attractions
 
 
 --
--- TOC entry 3749 (class 2606 OID 18715)
+-- TOC entry 3760 (class 2606 OID 18715)
 -- Name: combo_slots combo_slots_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4314,7 +5271,7 @@ ALTER TABLE ONLY public.combo_slots
 
 
 --
--- TOC entry 3849 (class 2606 OID 19425)
+-- TOC entry 3860 (class 2606 OID 19425)
 -- Name: combos combos_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4323,7 +5280,7 @@ ALTER TABLE ONLY public.combos
 
 
 --
--- TOC entry 3810 (class 2606 OID 19170)
+-- TOC entry 3821 (class 2606 OID 19170)
 -- Name: coupons coupons_code_key; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4332,7 +5289,7 @@ ALTER TABLE ONLY public.coupons
 
 
 --
--- TOC entry 3812 (class 2606 OID 19168)
+-- TOC entry 3823 (class 2606 OID 19168)
 -- Name: coupons coupons_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4341,7 +5298,7 @@ ALTER TABLE ONLY public.coupons
 
 
 --
--- TOC entry 3772 (class 2606 OID 18868)
+-- TOC entry 3783 (class 2606 OID 18868)
 -- Name: gallery_items gallery_items_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4350,7 +5307,7 @@ ALTER TABLE ONLY public.gallery_items
 
 
 --
--- TOC entry 3832 (class 2606 OID 19313)
+-- TOC entry 3843 (class 2606 OID 19313)
 -- Name: happy_hours happy_hours_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4359,7 +5316,7 @@ ALTER TABLE ONLY public.happy_hours
 
 
 --
--- TOC entry 3828 (class 2606 OID 19295)
+-- TOC entry 3839 (class 2606 OID 19295)
 -- Name: holidays holidays_holiday_date_key; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4368,7 +5325,7 @@ ALTER TABLE ONLY public.holidays
 
 
 --
--- TOC entry 3830 (class 2606 OID 19293)
+-- TOC entry 3841 (class 2606 OID 19293)
 -- Name: holidays holidays_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4377,7 +5334,7 @@ ALTER TABLE ONLY public.holidays
 
 
 --
--- TOC entry 3814 (class 2606 OID 19191)
+-- TOC entry 3825 (class 2606 OID 19191)
 -- Name: media_files media_files_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4386,7 +5343,7 @@ ALTER TABLE ONLY public.media_files
 
 
 --
--- TOC entry 3826 (class 2606 OID 19270)
+-- TOC entry 3837 (class 2606 OID 19270)
 -- Name: notifications notifications_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4395,7 +5352,7 @@ ALTER TABLE ONLY public.notifications
 
 
 --
--- TOC entry 3761 (class 2606 OID 18786)
+-- TOC entry 3772 (class 2606 OID 18786)
 -- Name: offer_rules offer_rules_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4404,7 +5361,7 @@ ALTER TABLE ONLY public.offer_rules
 
 
 --
--- TOC entry 3759 (class 2606 OID 18763)
+-- TOC entry 3770 (class 2606 OID 18763)
 -- Name: offers offers_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4413,7 +5370,7 @@ ALTER TABLE ONLY public.offers
 
 
 --
--- TOC entry 3780 (class 2606 OID 18916)
+-- TOC entry 3791 (class 2606 OID 18916)
 -- Name: orders orders_order_ref_key; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4422,7 +5379,7 @@ ALTER TABLE ONLY public.orders
 
 
 --
--- TOC entry 3782 (class 2606 OID 18914)
+-- TOC entry 3793 (class 2606 OID 18914)
 -- Name: orders orders_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4431,7 +5388,7 @@ ALTER TABLE ONLY public.orders
 
 
 --
--- TOC entry 3843 (class 2606 OID 19377)
+-- TOC entry 3854 (class 2606 OID 19377)
 -- Name: payment_txn_logs payment_txn_logs_payment_ref_key; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4440,7 +5397,7 @@ ALTER TABLE ONLY public.payment_txn_logs
 
 
 --
--- TOC entry 3845 (class 2606 OID 19379)
+-- TOC entry 3856 (class 2606 OID 19379)
 -- Name: payment_txn_logs payment_txn_logs_payment_txn_no_key; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4449,7 +5406,7 @@ ALTER TABLE ONLY public.payment_txn_logs
 
 
 --
--- TOC entry 3847 (class 2606 OID 19375)
+-- TOC entry 3858 (class 2606 OID 19375)
 -- Name: payment_txn_logs payment_txn_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4458,7 +5415,7 @@ ALTER TABLE ONLY public.payment_txn_logs
 
 
 --
--- TOC entry 3721 (class 2606 OID 18526)
+-- TOC entry 3732 (class 2606 OID 18526)
 -- Name: permissions permissions_permission_key_key; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4467,7 +5424,7 @@ ALTER TABLE ONLY public.permissions
 
 
 --
--- TOC entry 3723 (class 2606 OID 18524)
+-- TOC entry 3734 (class 2606 OID 18524)
 -- Name: permissions permissions_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4476,7 +5433,7 @@ ALTER TABLE ONLY public.permissions
 
 
 --
--- TOC entry 3725 (class 2606 OID 18540)
+-- TOC entry 3736 (class 2606 OID 18540)
 -- Name: role_permissions role_permissions_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4485,7 +5442,7 @@ ALTER TABLE ONLY public.role_permissions
 
 
 --
--- TOC entry 3717 (class 2606 OID 18507)
+-- TOC entry 3728 (class 2606 OID 18507)
 -- Name: roles roles_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4494,7 +5451,7 @@ ALTER TABLE ONLY public.roles
 
 
 --
--- TOC entry 3719 (class 2606 OID 18509)
+-- TOC entry 3730 (class 2606 OID 18509)
 -- Name: roles roles_role_name_key; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4503,7 +5460,7 @@ ALTER TABLE ONLY public.roles
 
 
 --
--- TOC entry 3820 (class 2606 OID 19239)
+-- TOC entry 3831 (class 2606 OID 19239)
 -- Name: settings settings_key_name_key; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4512,7 +5469,7 @@ ALTER TABLE ONLY public.settings
 
 
 --
--- TOC entry 3822 (class 2606 OID 19237)
+-- TOC entry 3833 (class 2606 OID 19237)
 -- Name: settings settings_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4521,7 +5478,7 @@ ALTER TABLE ONLY public.settings
 
 
 --
--- TOC entry 3818 (class 2606 OID 19216)
+-- TOC entry 3829 (class 2606 OID 19216)
 -- Name: analytics uq_analytics_day; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4530,7 +5487,7 @@ ALTER TABLE ONLY public.analytics
 
 
 --
--- TOC entry 3739 (class 2606 OID 18633)
+-- TOC entry 3750 (class 2606 OID 18633)
 -- Name: attraction_slots uq_attraction_slots_slot_code; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4539,7 +5496,7 @@ ALTER TABLE ONLY public.attraction_slots
 
 
 --
--- TOC entry 3792 (class 2606 OID 19029)
+-- TOC entry 3803 (class 2606 OID 19029)
 -- Name: booking_addons uq_booking_addon; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4548,7 +5505,7 @@ ALTER TABLE ONLY public.booking_addons
 
 
 --
--- TOC entry 3808 (class 2606 OID 19133)
+-- TOC entry 3819 (class 2606 OID 19133)
 -- Name: cart_bookings uq_cart_booking; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4557,7 +5514,7 @@ ALTER TABLE ONLY public.cart_bookings
 
 
 --
--- TOC entry 3745 (class 2606 OID 18681)
+-- TOC entry 3756 (class 2606 OID 18681)
 -- Name: combo_attractions uq_combo_attraction; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4566,7 +5523,7 @@ ALTER TABLE ONLY public.combo_attractions
 
 
 --
--- TOC entry 3747 (class 2606 OID 18683)
+-- TOC entry 3758 (class 2606 OID 18683)
 -- Name: combo_attractions uq_combo_position; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4575,7 +5532,7 @@ ALTER TABLE ONLY public.combo_attractions
 
 
 --
--- TOC entry 3751 (class 2606 OID 19443)
+-- TOC entry 3762 (class 2606 OID 19443)
 -- Name: combo_slots uq_combo_slot_code; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4584,7 +5541,7 @@ ALTER TABLE ONLY public.combo_slots
 
 
 --
--- TOC entry 3753 (class 2606 OID 18719)
+-- TOC entry 3764 (class 2606 OID 18719)
 -- Name: combo_slots uq_combo_slots_code; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4593,7 +5550,7 @@ ALTER TABLE ONLY public.combo_slots
 
 
 --
--- TOC entry 3755 (class 2606 OID 18717)
+-- TOC entry 3766 (class 2606 OID 18717)
 -- Name: combo_slots uq_combo_slots_window; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4602,7 +5559,7 @@ ALTER TABLE ONLY public.combo_slots
 
 
 --
--- TOC entry 3727 (class 2606 OID 18542)
+-- TOC entry 3738 (class 2606 OID 18542)
 -- Name: role_permissions uq_role_perm; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4611,7 +5568,7 @@ ALTER TABLE ONLY public.role_permissions
 
 
 --
--- TOC entry 3741 (class 2606 OID 18631)
+-- TOC entry 3752 (class 2606 OID 18631)
 -- Name: attraction_slots uq_slot_window; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4620,7 +5577,7 @@ ALTER TABLE ONLY public.attraction_slots
 
 
 --
--- TOC entry 3729 (class 2606 OID 18567)
+-- TOC entry 3740 (class 2606 OID 18567)
 -- Name: user_roles uq_user_role; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4629,7 +5586,7 @@ ALTER TABLE ONLY public.user_roles
 
 
 --
--- TOC entry 3731 (class 2606 OID 18565)
+-- TOC entry 3742 (class 2606 OID 18565)
 -- Name: user_roles user_roles_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4638,7 +5595,7 @@ ALTER TABLE ONLY public.user_roles
 
 
 --
--- TOC entry 3711 (class 2606 OID 18490)
+-- TOC entry 3722 (class 2606 OID 18490)
 -- Name: users users_email_key; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4647,7 +5604,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- TOC entry 3713 (class 2606 OID 18492)
+-- TOC entry 3724 (class 2606 OID 18492)
 -- Name: users users_phone_key; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4656,7 +5613,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- TOC entry 3715 (class 2606 OID 18488)
+-- TOC entry 3726 (class 2606 OID 18488)
 -- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -4665,7 +5622,15 @@ ALTER TABLE ONLY public.users
 
 
 --
--- TOC entry 3835 (class 1259 OID 19354)
+-- TOC entry 3863 (class 1259 OID 19585)
+-- Name: idx_admin_access_user_type; Type: INDEX; Schema: public; Owner: root
+--
+
+CREATE INDEX idx_admin_access_user_type ON public.admin_access USING btree (user_id, resource_type);
+
+
+--
+-- TOC entry 3846 (class 1259 OID 19354)
 -- Name: idx_booking_history_booking_id; Type: INDEX; Schema: public; Owner: root
 --
 
@@ -4673,7 +5638,7 @@ CREATE INDEX idx_booking_history_booking_id ON public.booking_history USING btre
 
 
 --
--- TOC entry 3836 (class 1259 OID 19356)
+-- TOC entry 3847 (class 1259 OID 19356)
 -- Name: idx_booking_history_created_at; Type: INDEX; Schema: public; Owner: root
 --
 
@@ -4681,7 +5646,7 @@ CREATE INDEX idx_booking_history_created_at ON public.booking_history USING btre
 
 
 --
--- TOC entry 3837 (class 1259 OID 19355)
+-- TOC entry 3848 (class 1259 OID 19355)
 -- Name: idx_booking_history_new_status; Type: INDEX; Schema: public; Owner: root
 --
 
@@ -4689,7 +5654,7 @@ CREATE INDEX idx_booking_history_new_status ON public.booking_history USING btre
 
 
 --
--- TOC entry 3787 (class 1259 OID 19007)
+-- TOC entry 3798 (class 1259 OID 19007)
 -- Name: idx_bookings_order_id; Type: INDEX; Schema: public; Owner: root
 --
 
@@ -4697,7 +5662,7 @@ CREATE INDEX idx_bookings_order_id ON public.bookings USING btree (order_id);
 
 
 --
--- TOC entry 3788 (class 1259 OID 19008)
+-- TOC entry 3799 (class 1259 OID 19008)
 -- Name: idx_bookings_parent_booking_id; Type: INDEX; Schema: public; Owner: root
 --
 
@@ -4705,7 +5670,7 @@ CREATE INDEX idx_bookings_parent_booking_id ON public.bookings USING btree (pare
 
 
 --
--- TOC entry 3802 (class 1259 OID 19327)
+-- TOC entry 3813 (class 1259 OID 19327)
 -- Name: idx_cart_items_cart_id; Type: INDEX; Schema: public; Owner: root
 --
 
@@ -4713,7 +5678,7 @@ CREATE INDEX idx_cart_items_cart_id ON public.cart_items USING btree (cart_id);
 
 
 --
--- TOC entry 3803 (class 1259 OID 19329)
+-- TOC entry 3814 (class 1259 OID 19329)
 -- Name: idx_cart_items_slot_id; Type: INDEX; Schema: public; Owner: root
 --
 
@@ -4721,7 +5686,7 @@ CREATE INDEX idx_cart_items_slot_id ON public.cart_items USING btree (slot_id);
 
 
 --
--- TOC entry 3804 (class 1259 OID 19328)
+-- TOC entry 3815 (class 1259 OID 19328)
 -- Name: idx_cart_items_type; Type: INDEX; Schema: public; Owner: root
 --
 
@@ -4729,7 +5694,7 @@ CREATE INDEX idx_cart_items_type ON public.cart_items USING btree (item_type);
 
 
 --
--- TOC entry 3797 (class 1259 OID 19325)
+-- TOC entry 3808 (class 1259 OID 19325)
 -- Name: idx_carts_session_id; Type: INDEX; Schema: public; Owner: root
 --
 
@@ -4737,7 +5702,7 @@ CREATE INDEX idx_carts_session_id ON public.carts USING btree (session_id);
 
 
 --
--- TOC entry 3798 (class 1259 OID 19326)
+-- TOC entry 3809 (class 1259 OID 19326)
 -- Name: idx_carts_status; Type: INDEX; Schema: public; Owner: root
 --
 
@@ -4745,7 +5710,7 @@ CREATE INDEX idx_carts_status ON public.carts USING btree (status);
 
 
 --
--- TOC entry 3799 (class 1259 OID 19324)
+-- TOC entry 3810 (class 1259 OID 19324)
 -- Name: idx_carts_user_id; Type: INDEX; Schema: public; Owner: root
 --
 
@@ -4753,7 +5718,7 @@ CREATE INDEX idx_carts_user_id ON public.carts USING btree (user_id);
 
 
 --
--- TOC entry 3766 (class 1259 OID 19405)
+-- TOC entry 3777 (class 1259 OID 19405)
 -- Name: idx_cms_pages_nav_group; Type: INDEX; Schema: public; Owner: root
 --
 
@@ -4761,7 +5726,7 @@ CREATE INDEX idx_cms_pages_nav_group ON public.cms_pages USING btree (nav_group)
 
 
 --
--- TOC entry 3773 (class 1259 OID 19400)
+-- TOC entry 3784 (class 1259 OID 19400)
 -- Name: idx_gallery_items_active; Type: INDEX; Schema: public; Owner: root
 --
 
@@ -4769,7 +5734,7 @@ CREATE INDEX idx_gallery_items_active ON public.gallery_items USING btree (activ
 
 
 --
--- TOC entry 3774 (class 1259 OID 19404)
+-- TOC entry 3785 (class 1259 OID 19404)
 -- Name: idx_gallery_items_target; Type: INDEX; Schema: public; Owner: root
 --
 
@@ -4777,7 +5742,7 @@ CREATE INDEX idx_gallery_items_target ON public.gallery_items USING btree (targe
 
 
 --
--- TOC entry 3777 (class 1259 OID 18922)
+-- TOC entry 3788 (class 1259 OID 18922)
 -- Name: idx_orders_payment_txn_no; Type: INDEX; Schema: public; Owner: root
 --
 
@@ -4785,7 +5750,7 @@ CREATE UNIQUE INDEX idx_orders_payment_txn_no ON public.orders USING btree (paym
 
 
 --
--- TOC entry 3778 (class 1259 OID 19403)
+-- TOC entry 3789 (class 1259 OID 19403)
 -- Name: idx_orders_user_id; Type: INDEX; Schema: public; Owner: root
 --
 
@@ -4793,7 +5758,7 @@ CREATE INDEX idx_orders_user_id ON public.orders USING btree (user_id);
 
 
 --
--- TOC entry 3838 (class 1259 OID 19391)
+-- TOC entry 3849 (class 1259 OID 19391)
 -- Name: idx_payment_txn_logs_booking_id; Type: INDEX; Schema: public; Owner: root
 --
 
@@ -4801,7 +5766,7 @@ CREATE INDEX idx_payment_txn_logs_booking_id ON public.payment_txn_logs USING bt
 
 
 --
--- TOC entry 3839 (class 1259 OID 19392)
+-- TOC entry 3850 (class 1259 OID 19392)
 -- Name: idx_payment_txn_logs_cart_id; Type: INDEX; Schema: public; Owner: root
 --
 
@@ -4809,7 +5774,7 @@ CREATE INDEX idx_payment_txn_logs_cart_id ON public.payment_txn_logs USING btree
 
 
 --
--- TOC entry 3840 (class 1259 OID 19393)
+-- TOC entry 3851 (class 1259 OID 19393)
 -- Name: idx_payment_txn_logs_ref; Type: INDEX; Schema: public; Owner: root
 --
 
@@ -4817,7 +5782,7 @@ CREATE INDEX idx_payment_txn_logs_ref ON public.payment_txn_logs USING btree (pa
 
 
 --
--- TOC entry 3841 (class 1259 OID 19394)
+-- TOC entry 3852 (class 1259 OID 19394)
 -- Name: idx_payment_txn_logs_status; Type: INDEX; Schema: public; Owner: root
 --
 
@@ -4825,7 +5790,7 @@ CREATE INDEX idx_payment_txn_logs_status ON public.payment_txn_logs USING btree 
 
 
 --
--- TOC entry 3902 (class 2620 OID 19222)
+-- TOC entry 3917 (class 2620 OID 19222)
 -- Name: analytics trg_analytics_updated_at; Type: TRIGGER; Schema: public; Owner: root
 --
 
@@ -4833,7 +5798,7 @@ CREATE TRIGGER trg_analytics_updated_at BEFORE UPDATE ON public.analytics FOR EA
 
 
 --
--- TOC entry 3890 (class 2620 OID 18639)
+-- TOC entry 3905 (class 2620 OID 18639)
 -- Name: attraction_slots trg_attraction_slots_updated_at; Type: TRIGGER; Schema: public; Owner: root
 --
 
@@ -4841,7 +5806,7 @@ CREATE TRIGGER trg_attraction_slots_updated_at BEFORE UPDATE ON public.attractio
 
 
 --
--- TOC entry 3889 (class 2620 OID 18607)
+-- TOC entry 3904 (class 2620 OID 18607)
 -- Name: attractions trg_attractions_updated_at; Type: TRIGGER; Schema: public; Owner: root
 --
 
@@ -4849,7 +5814,7 @@ CREATE TRIGGER trg_attractions_updated_at BEFORE UPDATE ON public.attractions FO
 
 
 --
--- TOC entry 3896 (class 2620 OID 18847)
+-- TOC entry 3911 (class 2620 OID 18847)
 -- Name: blogs trg_blogs_updated_at; Type: TRIGGER; Schema: public; Owner: root
 --
 
@@ -4857,7 +5822,7 @@ CREATE TRIGGER trg_blogs_updated_at BEFORE UPDATE ON public.blogs FOR EACH ROW E
 
 
 --
--- TOC entry 3899 (class 2620 OID 19009)
+-- TOC entry 3914 (class 2620 OID 19009)
 -- Name: bookings trg_bookings_updated_at; Type: TRIGGER; Schema: public; Owner: root
 --
 
@@ -4865,7 +5830,7 @@ CREATE TRIGGER trg_bookings_updated_at BEFORE UPDATE ON public.bookings FOR EACH
 
 
 --
--- TOC entry 3901 (class 2620 OID 19120)
+-- TOC entry 3916 (class 2620 OID 19120)
 -- Name: cart_items trg_cart_items_updated_at; Type: TRIGGER; Schema: public; Owner: root
 --
 
@@ -4873,7 +5838,7 @@ CREATE TRIGGER trg_cart_items_updated_at BEFORE UPDATE ON public.cart_items FOR 
 
 
 --
--- TOC entry 3900 (class 2620 OID 19075)
+-- TOC entry 3915 (class 2620 OID 19075)
 -- Name: carts trg_carts_updated_at; Type: TRIGGER; Schema: public; Owner: root
 --
 
@@ -4881,7 +5846,7 @@ CREATE TRIGGER trg_carts_updated_at BEFORE UPDATE ON public.carts FOR EACH ROW E
 
 
 --
--- TOC entry 3895 (class 2620 OID 18821)
+-- TOC entry 3910 (class 2620 OID 18821)
 -- Name: cms_pages trg_cms_pages_updated_at; Type: TRIGGER; Schema: public; Owner: root
 --
 
@@ -4889,7 +5854,7 @@ CREATE TRIGGER trg_cms_pages_updated_at BEFORE UPDATE ON public.cms_pages FOR EA
 
 
 --
--- TOC entry 3893 (class 2620 OID 18725)
+-- TOC entry 3908 (class 2620 OID 18725)
 -- Name: combo_slots trg_combo_slots_updated_at; Type: TRIGGER; Schema: public; Owner: root
 --
 
@@ -4897,7 +5862,7 @@ CREATE TRIGGER trg_combo_slots_updated_at BEFORE UPDATE ON public.combo_slots FO
 
 
 --
--- TOC entry 3906 (class 2620 OID 19438)
+-- TOC entry 3921 (class 2620 OID 19438)
 -- Name: combos trg_combos_updated_at; Type: TRIGGER; Schema: public; Owner: root
 --
 
@@ -4905,7 +5870,7 @@ CREATE TRIGGER trg_combos_updated_at BEFORE UPDATE ON public.combos FOR EACH ROW
 
 
 --
--- TOC entry 3897 (class 2620 OID 18869)
+-- TOC entry 3912 (class 2620 OID 18869)
 -- Name: gallery_items trg_gallery_items_updated_at; Type: TRIGGER; Schema: public; Owner: root
 --
 
@@ -4913,7 +5878,7 @@ CREATE TRIGGER trg_gallery_items_updated_at BEFORE UPDATE ON public.gallery_item
 
 
 --
--- TOC entry 3904 (class 2620 OID 19281)
+-- TOC entry 3919 (class 2620 OID 19281)
 -- Name: notifications trg_notifications_updated_at; Type: TRIGGER; Schema: public; Owner: root
 --
 
@@ -4921,7 +5886,7 @@ CREATE TRIGGER trg_notifications_updated_at BEFORE UPDATE ON public.notification
 
 
 --
--- TOC entry 3894 (class 2620 OID 18764)
+-- TOC entry 3909 (class 2620 OID 18764)
 -- Name: offers trg_offers_updated_at; Type: TRIGGER; Schema: public; Owner: root
 --
 
@@ -4929,7 +5894,7 @@ CREATE TRIGGER trg_offers_updated_at BEFORE UPDATE ON public.offers FOR EACH ROW
 
 
 --
--- TOC entry 3898 (class 2620 OID 18923)
+-- TOC entry 3913 (class 2620 OID 18923)
 -- Name: orders trg_orders_updated_at; Type: TRIGGER; Schema: public; Owner: root
 --
 
@@ -4937,7 +5902,7 @@ CREATE TRIGGER trg_orders_updated_at BEFORE UPDATE ON public.orders FOR EACH ROW
 
 
 --
--- TOC entry 3905 (class 2620 OID 19390)
+-- TOC entry 3920 (class 2620 OID 19390)
 -- Name: payment_txn_logs trg_payment_txn_logs_updated_at; Type: TRIGGER; Schema: public; Owner: root
 --
 
@@ -4945,7 +5910,7 @@ CREATE TRIGGER trg_payment_txn_logs_updated_at BEFORE UPDATE ON public.payment_t
 
 
 --
--- TOC entry 3888 (class 2620 OID 18527)
+-- TOC entry 3903 (class 2620 OID 18527)
 -- Name: permissions trg_permissions_updated_at; Type: TRIGGER; Schema: public; Owner: root
 --
 
@@ -4953,7 +5918,7 @@ CREATE TRIGGER trg_permissions_updated_at BEFORE UPDATE ON public.permissions FO
 
 
 --
--- TOC entry 3887 (class 2620 OID 18510)
+-- TOC entry 3902 (class 2620 OID 18510)
 -- Name: roles trg_roles_updated_at; Type: TRIGGER; Schema: public; Owner: root
 --
 
@@ -4961,7 +5926,7 @@ CREATE TRIGGER trg_roles_updated_at BEFORE UPDATE ON public.roles FOR EACH ROW E
 
 
 --
--- TOC entry 3903 (class 2620 OID 19240)
+-- TOC entry 3918 (class 2620 OID 19240)
 -- Name: settings trg_settings_updated_at; Type: TRIGGER; Schema: public; Owner: root
 --
 
@@ -4969,7 +5934,15 @@ CREATE TRIGGER trg_settings_updated_at BEFORE UPDATE ON public.settings FOR EACH
 
 
 --
--- TOC entry 3891 (class 2620 OID 19520)
+-- TOC entry 3922 (class 2620 OID 19584)
+-- Name: admin_access trg_touch_admin_access; Type: TRIGGER; Schema: public; Owner: root
+--
+
+CREATE TRIGGER trg_touch_admin_access BEFORE UPDATE ON public.admin_access FOR EACH ROW EXECUTE FUNCTION public.touch_admin_access_updated_at();
+
+
+--
+-- TOC entry 3906 (class 2620 OID 19520)
 -- Name: combo_attractions trg_update_combo_details; Type: TRIGGER; Schema: public; Owner: root
 --
 
@@ -4977,7 +5950,7 @@ CREATE TRIGGER trg_update_combo_details AFTER INSERT OR DELETE OR UPDATE ON publ
 
 
 --
--- TOC entry 3886 (class 2620 OID 18493)
+-- TOC entry 3901 (class 2620 OID 18493)
 -- Name: users trg_users_updated_at; Type: TRIGGER; Schema: public; Owner: root
 --
 
@@ -4985,7 +5958,7 @@ CREATE TRIGGER trg_users_updated_at BEFORE UPDATE ON public.users FOR EACH ROW E
 
 
 --
--- TOC entry 3892 (class 2620 OID 19322)
+-- TOC entry 3907 (class 2620 OID 19322)
 -- Name: combo_attractions trg_validate_combo_attractions; Type: TRIGGER; Schema: public; Owner: root
 --
 
@@ -4993,7 +5966,16 @@ CREATE TRIGGER trg_validate_combo_attractions BEFORE INSERT OR UPDATE ON public.
 
 
 --
--- TOC entry 3876 (class 2606 OID 19217)
+-- TOC entry 3900 (class 2606 OID 19578)
+-- Name: admin_access admin_access_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
+--
+
+ALTER TABLE ONLY public.admin_access
+    ADD CONSTRAINT admin_access_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 3890 (class 2606 OID 19217)
 -- Name: analytics analytics_attraction_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5002,7 +5984,7 @@ ALTER TABLE ONLY public.analytics
 
 
 --
--- TOC entry 3854 (class 2606 OID 18634)
+-- TOC entry 3868 (class 2606 OID 18634)
 -- Name: attraction_slots attraction_slots_attraction_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5011,7 +5993,7 @@ ALTER TABLE ONLY public.attraction_slots
 
 
 --
--- TOC entry 3857 (class 2606 OID 18885)
+-- TOC entry 3871 (class 2606 OID 18885)
 -- Name: banners banners_linked_attraction_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5020,7 +6002,7 @@ ALTER TABLE ONLY public.banners
 
 
 --
--- TOC entry 3858 (class 2606 OID 18890)
+-- TOC entry 3872 (class 2606 OID 18890)
 -- Name: banners banners_linked_offer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5029,7 +6011,7 @@ ALTER TABLE ONLY public.banners
 
 
 --
--- TOC entry 3867 (class 2606 OID 19035)
+-- TOC entry 3881 (class 2606 OID 19035)
 -- Name: booking_addons booking_addons_addon_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5038,7 +6020,7 @@ ALTER TABLE ONLY public.booking_addons
 
 
 --
--- TOC entry 3868 (class 2606 OID 19030)
+-- TOC entry 3882 (class 2606 OID 19030)
 -- Name: booking_addons booking_addons_booking_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5047,7 +6029,7 @@ ALTER TABLE ONLY public.booking_addons
 
 
 --
--- TOC entry 3880 (class 2606 OID 19344)
+-- TOC entry 3894 (class 2606 OID 19344)
 -- Name: booking_history booking_history_booking_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5056,7 +6038,7 @@ ALTER TABLE ONLY public.booking_history
 
 
 --
--- TOC entry 3881 (class 2606 OID 19349)
+-- TOC entry 3895 (class 2606 OID 19349)
 -- Name: booking_history booking_history_changed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5065,7 +6047,7 @@ ALTER TABLE ONLY public.booking_history
 
 
 --
--- TOC entry 3860 (class 2606 OID 18977)
+-- TOC entry 3874 (class 2606 OID 18977)
 -- Name: bookings bookings_attraction_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5074,7 +6056,7 @@ ALTER TABLE ONLY public.bookings
 
 
 --
--- TOC entry 3861 (class 2606 OID 18992)
+-- TOC entry 3875 (class 2606 OID 18992)
 -- Name: bookings bookings_combo_slot_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5083,7 +6065,7 @@ ALTER TABLE ONLY public.bookings
 
 
 --
--- TOC entry 3862 (class 2606 OID 18997)
+-- TOC entry 3876 (class 2606 OID 18997)
 -- Name: bookings bookings_offer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5092,7 +6074,7 @@ ALTER TABLE ONLY public.bookings
 
 
 --
--- TOC entry 3863 (class 2606 OID 18967)
+-- TOC entry 3877 (class 2606 OID 18967)
 -- Name: bookings bookings_order_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5101,7 +6083,7 @@ ALTER TABLE ONLY public.bookings
 
 
 --
--- TOC entry 3864 (class 2606 OID 19002)
+-- TOC entry 3878 (class 2606 OID 19002)
 -- Name: bookings bookings_parent_booking_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5110,7 +6092,7 @@ ALTER TABLE ONLY public.bookings
 
 
 --
--- TOC entry 3865 (class 2606 OID 18987)
+-- TOC entry 3879 (class 2606 OID 18987)
 -- Name: bookings bookings_slot_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5119,7 +6101,7 @@ ALTER TABLE ONLY public.bookings
 
 
 --
--- TOC entry 3866 (class 2606 OID 18972)
+-- TOC entry 3880 (class 2606 OID 18972)
 -- Name: bookings bookings_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5128,7 +6110,7 @@ ALTER TABLE ONLY public.bookings
 
 
 --
--- TOC entry 3873 (class 2606 OID 19139)
+-- TOC entry 3887 (class 2606 OID 19139)
 -- Name: cart_bookings cart_bookings_booking_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5137,7 +6119,7 @@ ALTER TABLE ONLY public.cart_bookings
 
 
 --
--- TOC entry 3874 (class 2606 OID 19134)
+-- TOC entry 3888 (class 2606 OID 19134)
 -- Name: cart_bookings cart_bookings_cart_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5146,7 +6128,7 @@ ALTER TABLE ONLY public.cart_bookings
 
 
 --
--- TOC entry 3870 (class 2606 OID 19105)
+-- TOC entry 3884 (class 2606 OID 19105)
 -- Name: cart_items cart_items_attraction_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5155,7 +6137,7 @@ ALTER TABLE ONLY public.cart_items
 
 
 --
--- TOC entry 3871 (class 2606 OID 19100)
+-- TOC entry 3885 (class 2606 OID 19100)
 -- Name: cart_items cart_items_cart_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5164,7 +6146,7 @@ ALTER TABLE ONLY public.cart_items
 
 
 --
--- TOC entry 3872 (class 2606 OID 19115)
+-- TOC entry 3886 (class 2606 OID 19115)
 -- Name: cart_items cart_items_slot_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5173,7 +6155,7 @@ ALTER TABLE ONLY public.cart_items
 
 
 --
--- TOC entry 3869 (class 2606 OID 19070)
+-- TOC entry 3883 (class 2606 OID 19070)
 -- Name: carts carts_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5182,7 +6164,7 @@ ALTER TABLE ONLY public.carts
 
 
 --
--- TOC entry 3855 (class 2606 OID 18689)
+-- TOC entry 3869 (class 2606 OID 18689)
 -- Name: combo_attractions combo_attractions_attraction_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5191,7 +6173,7 @@ ALTER TABLE ONLY public.combo_attractions
 
 
 --
--- TOC entry 3884 (class 2606 OID 19428)
+-- TOC entry 3898 (class 2606 OID 19428)
 -- Name: combos combos_attraction_1_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5200,7 +6182,7 @@ ALTER TABLE ONLY public.combos
 
 
 --
--- TOC entry 3885 (class 2606 OID 19433)
+-- TOC entry 3899 (class 2606 OID 19433)
 -- Name: combos combos_attraction_2_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5209,7 +6191,7 @@ ALTER TABLE ONLY public.combos
 
 
 --
--- TOC entry 3875 (class 2606 OID 19171)
+-- TOC entry 3889 (class 2606 OID 19171)
 -- Name: coupons coupons_attraction_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5218,7 +6200,7 @@ ALTER TABLE ONLY public.coupons
 
 
 --
--- TOC entry 3879 (class 2606 OID 19314)
+-- TOC entry 3893 (class 2606 OID 19314)
 -- Name: happy_hours happy_hours_attraction_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5227,7 +6209,7 @@ ALTER TABLE ONLY public.happy_hours
 
 
 --
--- TOC entry 3877 (class 2606 OID 19276)
+-- TOC entry 3891 (class 2606 OID 19276)
 -- Name: notifications notifications_booking_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5236,7 +6218,7 @@ ALTER TABLE ONLY public.notifications
 
 
 --
--- TOC entry 3878 (class 2606 OID 19271)
+-- TOC entry 3892 (class 2606 OID 19271)
 -- Name: notifications notifications_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5245,7 +6227,7 @@ ALTER TABLE ONLY public.notifications
 
 
 --
--- TOC entry 3856 (class 2606 OID 18787)
+-- TOC entry 3870 (class 2606 OID 18787)
 -- Name: offer_rules offer_rules_offer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5254,7 +6236,7 @@ ALTER TABLE ONLY public.offer_rules
 
 
 --
--- TOC entry 3859 (class 2606 OID 18917)
+-- TOC entry 3873 (class 2606 OID 18917)
 -- Name: orders orders_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5263,7 +6245,7 @@ ALTER TABLE ONLY public.orders
 
 
 --
--- TOC entry 3882 (class 2606 OID 19380)
+-- TOC entry 3896 (class 2606 OID 19380)
 -- Name: payment_txn_logs payment_txn_logs_booking_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5272,7 +6254,7 @@ ALTER TABLE ONLY public.payment_txn_logs
 
 
 --
--- TOC entry 3883 (class 2606 OID 19385)
+-- TOC entry 3897 (class 2606 OID 19385)
 -- Name: payment_txn_logs payment_txn_logs_cart_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5281,7 +6263,7 @@ ALTER TABLE ONLY public.payment_txn_logs
 
 
 --
--- TOC entry 3850 (class 2606 OID 18548)
+-- TOC entry 3864 (class 2606 OID 18548)
 -- Name: role_permissions role_permissions_permission_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5290,7 +6272,7 @@ ALTER TABLE ONLY public.role_permissions
 
 
 --
--- TOC entry 3851 (class 2606 OID 18543)
+-- TOC entry 3865 (class 2606 OID 18543)
 -- Name: role_permissions role_permissions_role_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5299,7 +6281,7 @@ ALTER TABLE ONLY public.role_permissions
 
 
 --
--- TOC entry 3852 (class 2606 OID 18573)
+-- TOC entry 3866 (class 2606 OID 18573)
 -- Name: user_roles user_roles_role_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5308,7 +6290,7 @@ ALTER TABLE ONLY public.user_roles
 
 
 --
--- TOC entry 3853 (class 2606 OID 18568)
+-- TOC entry 3867 (class 2606 OID 18568)
 -- Name: user_roles user_roles_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: root
 --
 
@@ -5317,7 +6299,7 @@ ALTER TABLE ONLY public.user_roles
 
 
 --
--- TOC entry 4129 (class 0 OID 0)
+-- TOC entry 4146 (class 0 OID 0)
 -- Dependencies: 6
 -- Name: SCHEMA public; Type: ACL; Schema: -; Owner: root
 --
@@ -5326,8 +6308,8 @@ REVOKE USAGE ON SCHEMA public FROM PUBLIC;
 
 
 --
--- TOC entry 4131 (class 0 OID 0)
--- Dependencies: 300
+-- TOC entry 4148 (class 0 OID 0)
+-- Dependencies: 301
 -- Name: FUNCTION citextin(cstring); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5335,8 +6317,8 @@ GRANT ALL ON FUNCTION public.citextin(cstring) TO root;
 
 
 --
--- TOC entry 4132 (class 0 OID 0)
--- Dependencies: 301
+-- TOC entry 4149 (class 0 OID 0)
+-- Dependencies: 302
 -- Name: FUNCTION citextout(public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5344,8 +6326,8 @@ GRANT ALL ON FUNCTION public.citextout(public.citext) TO root;
 
 
 --
--- TOC entry 4133 (class 0 OID 0)
--- Dependencies: 302
+-- TOC entry 4150 (class 0 OID 0)
+-- Dependencies: 303
 -- Name: FUNCTION citextrecv(internal); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5353,8 +6335,8 @@ GRANT ALL ON FUNCTION public.citextrecv(internal) TO root;
 
 
 --
--- TOC entry 4134 (class 0 OID 0)
--- Dependencies: 303
+-- TOC entry 4151 (class 0 OID 0)
+-- Dependencies: 304
 -- Name: FUNCTION citextsend(public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5362,8 +6344,8 @@ GRANT ALL ON FUNCTION public.citextsend(public.citext) TO root;
 
 
 --
--- TOC entry 4135 (class 0 OID 0)
--- Dependencies: 969
+-- TOC entry 4152 (class 0 OID 0)
+-- Dependencies: 971
 -- Name: TYPE citext; Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5371,8 +6353,8 @@ GRANT ALL ON TYPE public.citext TO root;
 
 
 --
--- TOC entry 4136 (class 0 OID 0)
--- Dependencies: 305
+-- TOC entry 4153 (class 0 OID 0)
+-- Dependencies: 306
 -- Name: FUNCTION citext(boolean); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5380,8 +6362,8 @@ GRANT ALL ON FUNCTION public.citext(boolean) TO root;
 
 
 --
--- TOC entry 4137 (class 0 OID 0)
--- Dependencies: 304
+-- TOC entry 4154 (class 0 OID 0)
+-- Dependencies: 305
 -- Name: FUNCTION citext(character); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5389,8 +6371,8 @@ GRANT ALL ON FUNCTION public.citext(character) TO root;
 
 
 --
--- TOC entry 4138 (class 0 OID 0)
--- Dependencies: 306
+-- TOC entry 4155 (class 0 OID 0)
+-- Dependencies: 307
 -- Name: FUNCTION citext(inet); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5398,8 +6380,8 @@ GRANT ALL ON FUNCTION public.citext(inet) TO root;
 
 
 --
--- TOC entry 4139 (class 0 OID 0)
--- Dependencies: 313
+-- TOC entry 4156 (class 0 OID 0)
+-- Dependencies: 314
 -- Name: FUNCTION citext_cmp(public.citext, public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5407,8 +6389,8 @@ GRANT ALL ON FUNCTION public.citext_cmp(public.citext, public.citext) TO root;
 
 
 --
--- TOC entry 4140 (class 0 OID 0)
--- Dependencies: 307
+-- TOC entry 4157 (class 0 OID 0)
+-- Dependencies: 308
 -- Name: FUNCTION citext_eq(public.citext, public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5416,8 +6398,8 @@ GRANT ALL ON FUNCTION public.citext_eq(public.citext, public.citext) TO root;
 
 
 --
--- TOC entry 4141 (class 0 OID 0)
--- Dependencies: 312
+-- TOC entry 4158 (class 0 OID 0)
+-- Dependencies: 313
 -- Name: FUNCTION citext_ge(public.citext, public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5425,8 +6407,8 @@ GRANT ALL ON FUNCTION public.citext_ge(public.citext, public.citext) TO root;
 
 
 --
--- TOC entry 4142 (class 0 OID 0)
--- Dependencies: 311
+-- TOC entry 4159 (class 0 OID 0)
+-- Dependencies: 312
 -- Name: FUNCTION citext_gt(public.citext, public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5434,8 +6416,8 @@ GRANT ALL ON FUNCTION public.citext_gt(public.citext, public.citext) TO root;
 
 
 --
--- TOC entry 4143 (class 0 OID 0)
--- Dependencies: 314
+-- TOC entry 4160 (class 0 OID 0)
+-- Dependencies: 315
 -- Name: FUNCTION citext_hash(public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5443,8 +6425,8 @@ GRANT ALL ON FUNCTION public.citext_hash(public.citext) TO root;
 
 
 --
--- TOC entry 4144 (class 0 OID 0)
--- Dependencies: 344
+-- TOC entry 4161 (class 0 OID 0)
+-- Dependencies: 345
 -- Name: FUNCTION citext_hash_extended(public.citext, bigint); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5452,8 +6434,8 @@ GRANT ALL ON FUNCTION public.citext_hash_extended(public.citext, bigint) TO root
 
 
 --
--- TOC entry 4145 (class 0 OID 0)
--- Dependencies: 316
+-- TOC entry 4162 (class 0 OID 0)
+-- Dependencies: 317
 -- Name: FUNCTION citext_larger(public.citext, public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5461,8 +6443,8 @@ GRANT ALL ON FUNCTION public.citext_larger(public.citext, public.citext) TO root
 
 
 --
--- TOC entry 4146 (class 0 OID 0)
--- Dependencies: 310
+-- TOC entry 4163 (class 0 OID 0)
+-- Dependencies: 311
 -- Name: FUNCTION citext_le(public.citext, public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5470,8 +6452,8 @@ GRANT ALL ON FUNCTION public.citext_le(public.citext, public.citext) TO root;
 
 
 --
--- TOC entry 4147 (class 0 OID 0)
--- Dependencies: 309
+-- TOC entry 4164 (class 0 OID 0)
+-- Dependencies: 310
 -- Name: FUNCTION citext_lt(public.citext, public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5479,8 +6461,8 @@ GRANT ALL ON FUNCTION public.citext_lt(public.citext, public.citext) TO root;
 
 
 --
--- TOC entry 4148 (class 0 OID 0)
--- Dependencies: 308
+-- TOC entry 4165 (class 0 OID 0)
+-- Dependencies: 309
 -- Name: FUNCTION citext_ne(public.citext, public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5488,8 +6470,8 @@ GRANT ALL ON FUNCTION public.citext_ne(public.citext, public.citext) TO root;
 
 
 --
--- TOC entry 4149 (class 0 OID 0)
--- Dependencies: 343
+-- TOC entry 4166 (class 0 OID 0)
+-- Dependencies: 344
 -- Name: FUNCTION citext_pattern_cmp(public.citext, public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5497,8 +6479,8 @@ GRANT ALL ON FUNCTION public.citext_pattern_cmp(public.citext, public.citext) TO
 
 
 --
--- TOC entry 4150 (class 0 OID 0)
--- Dependencies: 342
+-- TOC entry 4167 (class 0 OID 0)
+-- Dependencies: 343
 -- Name: FUNCTION citext_pattern_ge(public.citext, public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5506,8 +6488,8 @@ GRANT ALL ON FUNCTION public.citext_pattern_ge(public.citext, public.citext) TO 
 
 
 --
--- TOC entry 4151 (class 0 OID 0)
--- Dependencies: 341
+-- TOC entry 4168 (class 0 OID 0)
+-- Dependencies: 342
 -- Name: FUNCTION citext_pattern_gt(public.citext, public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5515,8 +6497,8 @@ GRANT ALL ON FUNCTION public.citext_pattern_gt(public.citext, public.citext) TO 
 
 
 --
--- TOC entry 4152 (class 0 OID 0)
--- Dependencies: 340
+-- TOC entry 4169 (class 0 OID 0)
+-- Dependencies: 341
 -- Name: FUNCTION citext_pattern_le(public.citext, public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5524,8 +6506,8 @@ GRANT ALL ON FUNCTION public.citext_pattern_le(public.citext, public.citext) TO 
 
 
 --
--- TOC entry 4153 (class 0 OID 0)
--- Dependencies: 339
+-- TOC entry 4170 (class 0 OID 0)
+-- Dependencies: 340
 -- Name: FUNCTION citext_pattern_lt(public.citext, public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5533,8 +6515,8 @@ GRANT ALL ON FUNCTION public.citext_pattern_lt(public.citext, public.citext) TO 
 
 
 --
--- TOC entry 4154 (class 0 OID 0)
--- Dependencies: 315
+-- TOC entry 4171 (class 0 OID 0)
+-- Dependencies: 316
 -- Name: FUNCTION citext_smaller(public.citext, public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5542,8 +6524,8 @@ GRANT ALL ON FUNCTION public.citext_smaller(public.citext, public.citext) TO roo
 
 
 --
--- TOC entry 4155 (class 0 OID 0)
--- Dependencies: 325
+-- TOC entry 4172 (class 0 OID 0)
+-- Dependencies: 326
 -- Name: FUNCTION regexp_match(string public.citext, pattern public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5551,8 +6533,8 @@ GRANT ALL ON FUNCTION public.regexp_match(string public.citext, pattern public.c
 
 
 --
--- TOC entry 4156 (class 0 OID 0)
--- Dependencies: 326
+-- TOC entry 4173 (class 0 OID 0)
+-- Dependencies: 327
 -- Name: FUNCTION regexp_match(string public.citext, pattern public.citext, flags text); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5560,8 +6542,8 @@ GRANT ALL ON FUNCTION public.regexp_match(string public.citext, pattern public.c
 
 
 --
--- TOC entry 4157 (class 0 OID 0)
--- Dependencies: 327
+-- TOC entry 4174 (class 0 OID 0)
+-- Dependencies: 328
 -- Name: FUNCTION regexp_matches(string public.citext, pattern public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5569,8 +6551,8 @@ GRANT ALL ON FUNCTION public.regexp_matches(string public.citext, pattern public
 
 
 --
--- TOC entry 4158 (class 0 OID 0)
--- Dependencies: 328
+-- TOC entry 4175 (class 0 OID 0)
+-- Dependencies: 329
 -- Name: FUNCTION regexp_matches(string public.citext, pattern public.citext, flags text); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5578,8 +6560,8 @@ GRANT ALL ON FUNCTION public.regexp_matches(string public.citext, pattern public
 
 
 --
--- TOC entry 4159 (class 0 OID 0)
--- Dependencies: 329
+-- TOC entry 4176 (class 0 OID 0)
+-- Dependencies: 330
 -- Name: FUNCTION regexp_replace(string public.citext, pattern public.citext, replacement text); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5587,8 +6569,8 @@ GRANT ALL ON FUNCTION public.regexp_replace(string public.citext, pattern public
 
 
 --
--- TOC entry 4160 (class 0 OID 0)
--- Dependencies: 330
+-- TOC entry 4177 (class 0 OID 0)
+-- Dependencies: 331
 -- Name: FUNCTION regexp_replace(string public.citext, pattern public.citext, replacement text, flags text); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5596,8 +6578,8 @@ GRANT ALL ON FUNCTION public.regexp_replace(string public.citext, pattern public
 
 
 --
--- TOC entry 4161 (class 0 OID 0)
--- Dependencies: 331
+-- TOC entry 4178 (class 0 OID 0)
+-- Dependencies: 332
 -- Name: FUNCTION regexp_split_to_array(string public.citext, pattern public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5605,8 +6587,8 @@ GRANT ALL ON FUNCTION public.regexp_split_to_array(string public.citext, pattern
 
 
 --
--- TOC entry 4162 (class 0 OID 0)
--- Dependencies: 332
+-- TOC entry 4179 (class 0 OID 0)
+-- Dependencies: 333
 -- Name: FUNCTION regexp_split_to_array(string public.citext, pattern public.citext, flags text); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5614,8 +6596,8 @@ GRANT ALL ON FUNCTION public.regexp_split_to_array(string public.citext, pattern
 
 
 --
--- TOC entry 4163 (class 0 OID 0)
--- Dependencies: 333
+-- TOC entry 4180 (class 0 OID 0)
+-- Dependencies: 334
 -- Name: FUNCTION regexp_split_to_table(string public.citext, pattern public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5623,8 +6605,8 @@ GRANT ALL ON FUNCTION public.regexp_split_to_table(string public.citext, pattern
 
 
 --
--- TOC entry 4164 (class 0 OID 0)
--- Dependencies: 334
+-- TOC entry 4181 (class 0 OID 0)
+-- Dependencies: 335
 -- Name: FUNCTION regexp_split_to_table(string public.citext, pattern public.citext, flags text); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5632,8 +6614,8 @@ GRANT ALL ON FUNCTION public.regexp_split_to_table(string public.citext, pattern
 
 
 --
--- TOC entry 4165 (class 0 OID 0)
--- Dependencies: 336
+-- TOC entry 4182 (class 0 OID 0)
+-- Dependencies: 337
 -- Name: FUNCTION replace(public.citext, public.citext, public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5641,8 +6623,8 @@ GRANT ALL ON FUNCTION public.replace(public.citext, public.citext, public.citext
 
 
 --
--- TOC entry 4166 (class 0 OID 0)
--- Dependencies: 337
+-- TOC entry 4183 (class 0 OID 0)
+-- Dependencies: 338
 -- Name: FUNCTION split_part(public.citext, public.citext, integer); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5650,8 +6632,8 @@ GRANT ALL ON FUNCTION public.split_part(public.citext, public.citext, integer) T
 
 
 --
--- TOC entry 4167 (class 0 OID 0)
--- Dependencies: 335
+-- TOC entry 4184 (class 0 OID 0)
+-- Dependencies: 336
 -- Name: FUNCTION strpos(public.citext, public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5659,8 +6641,8 @@ GRANT ALL ON FUNCTION public.strpos(public.citext, public.citext) TO root;
 
 
 --
--- TOC entry 4168 (class 0 OID 0)
--- Dependencies: 321
+-- TOC entry 4185 (class 0 OID 0)
+-- Dependencies: 322
 -- Name: FUNCTION texticlike(public.citext, text); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5668,8 +6650,8 @@ GRANT ALL ON FUNCTION public.texticlike(public.citext, text) TO root;
 
 
 --
--- TOC entry 4169 (class 0 OID 0)
--- Dependencies: 317
+-- TOC entry 4186 (class 0 OID 0)
+-- Dependencies: 318
 -- Name: FUNCTION texticlike(public.citext, public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5677,8 +6659,8 @@ GRANT ALL ON FUNCTION public.texticlike(public.citext, public.citext) TO root;
 
 
 --
--- TOC entry 4170 (class 0 OID 0)
--- Dependencies: 322
+-- TOC entry 4187 (class 0 OID 0)
+-- Dependencies: 323
 -- Name: FUNCTION texticnlike(public.citext, text); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5686,8 +6668,8 @@ GRANT ALL ON FUNCTION public.texticnlike(public.citext, text) TO root;
 
 
 --
--- TOC entry 4171 (class 0 OID 0)
--- Dependencies: 318
+-- TOC entry 4188 (class 0 OID 0)
+-- Dependencies: 319
 -- Name: FUNCTION texticnlike(public.citext, public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5695,8 +6677,8 @@ GRANT ALL ON FUNCTION public.texticnlike(public.citext, public.citext) TO root;
 
 
 --
--- TOC entry 4172 (class 0 OID 0)
--- Dependencies: 323
+-- TOC entry 4189 (class 0 OID 0)
+-- Dependencies: 324
 -- Name: FUNCTION texticregexeq(public.citext, text); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5704,8 +6686,8 @@ GRANT ALL ON FUNCTION public.texticregexeq(public.citext, text) TO root;
 
 
 --
--- TOC entry 4173 (class 0 OID 0)
--- Dependencies: 319
+-- TOC entry 4190 (class 0 OID 0)
+-- Dependencies: 320
 -- Name: FUNCTION texticregexeq(public.citext, public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5713,8 +6695,8 @@ GRANT ALL ON FUNCTION public.texticregexeq(public.citext, public.citext) TO root
 
 
 --
--- TOC entry 4174 (class 0 OID 0)
--- Dependencies: 324
+-- TOC entry 4191 (class 0 OID 0)
+-- Dependencies: 325
 -- Name: FUNCTION texticregexne(public.citext, text); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5722,8 +6704,8 @@ GRANT ALL ON FUNCTION public.texticregexne(public.citext, text) TO root;
 
 
 --
--- TOC entry 4175 (class 0 OID 0)
--- Dependencies: 320
+-- TOC entry 4192 (class 0 OID 0)
+-- Dependencies: 321
 -- Name: FUNCTION texticregexne(public.citext, public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5731,8 +6713,8 @@ GRANT ALL ON FUNCTION public.texticregexne(public.citext, public.citext) TO root
 
 
 --
--- TOC entry 4176 (class 0 OID 0)
--- Dependencies: 338
+-- TOC entry 4193 (class 0 OID 0)
+-- Dependencies: 339
 -- Name: FUNCTION translate(public.citext, public.citext, text); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5740,8 +6722,8 @@ GRANT ALL ON FUNCTION public.translate(public.citext, public.citext, text) TO ro
 
 
 --
--- TOC entry 4177 (class 0 OID 0)
--- Dependencies: 1105
+-- TOC entry 4194 (class 0 OID 0)
+-- Dependencies: 1110
 -- Name: FUNCTION max(public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5749,8 +6731,8 @@ GRANT ALL ON FUNCTION public.max(public.citext) TO root;
 
 
 --
--- TOC entry 4178 (class 0 OID 0)
--- Dependencies: 1104
+-- TOC entry 4195 (class 0 OID 0)
+-- Dependencies: 1109
 -- Name: FUNCTION min(public.citext); Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -5758,7 +6740,7 @@ GRANT ALL ON FUNCTION public.min(public.citext) TO root;
 
 
 --
--- TOC entry 2334 (class 826 OID 16391)
+-- TOC entry 2339 (class 826 OID 16391)
 -- Name: DEFAULT PRIVILEGES FOR SEQUENCES; Type: DEFAULT ACL; Schema: -; Owner: postgres
 --
 
@@ -5766,7 +6748,7 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres GRANT ALL ON SEQUENCES TO root;
 
 
 --
--- TOC entry 2336 (class 826 OID 16393)
+-- TOC entry 2341 (class 826 OID 16393)
 -- Name: DEFAULT PRIVILEGES FOR TYPES; Type: DEFAULT ACL; Schema: -; Owner: postgres
 --
 
@@ -5774,7 +6756,7 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres GRANT ALL ON TYPES TO root;
 
 
 --
--- TOC entry 2335 (class 826 OID 16392)
+-- TOC entry 2340 (class 826 OID 16392)
 -- Name: DEFAULT PRIVILEGES FOR FUNCTIONS; Type: DEFAULT ACL; Schema: -; Owner: postgres
 --
 
@@ -5782,18 +6764,18 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres GRANT ALL ON FUNCTIONS TO root;
 
 
 --
--- TOC entry 2333 (class 826 OID 16390)
+-- TOC entry 2338 (class 826 OID 16390)
 -- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: -; Owner: postgres
 --
 
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres GRANT ALL ON TABLES TO root;
 
 
--- Completed on 2025-12-03 12:37:28
+-- Completed on 2025-12-12 13:17:12
 
 --
 -- PostgreSQL database dump complete
 --
 
-\unrestrict FkvAxBvXNWnj0h6wNpEzaDSys9bxKQD0JEL2vxfE7vhFB5uUkc8YbPuRMbmcUSn
+\unrestrict dwRYIfCOFrLJ47bjJf2OdLzy6ajk5jLHvlMgDTPls2s7hdWUnz6LZcMcNMb17nD
 
