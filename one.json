@@ -2,7 +2,7 @@
   "id": "env-snowcity-local-001",
   "name": "SnowCity Local",
   "values": [
-    { "key": "BASE_URL", "value": "https://snowcity-backend-zjlj.onrender.com", "type": "text", "enabled": true },
+    { "key": "BASE_URL", "value": "https://snowcity-backend-zjlj.onrender.com0", "type": "text", "enabled": true },
     { "key": "ADMIN_EMAIL", "value": "snowcity@gmail.com", "type": "text", "enabled": true },
     { "key": "ADMIN_PASSWORD", "value": "Snowcity@123", "type": "text", "enabled": true },
 

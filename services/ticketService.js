@@ -184,9 +184,18 @@ async function drawConsolidatedTicket(doc, data) {
     const itemTitle = item.item_title.toUpperCase();
     const typeLabel = item.item_type === 'Combo' ? ' [COMBO PACKAGE]' : '';
 
+    // Calculate item height based on addons and offers
+    let itemHeight = 55;
+    if (item.addons && item.addons.length > 0) {
+      itemHeight += item.addons.length * 12 + 10; // Extra space for addons
+    }
+    if (item.offer) {
+      itemHeight += 25; // Extra space for offer
+    }
+
     // Item Box Background
     doc.save();
-    doc.roundedRect(margin + 10, yPos, pageWidth - (margin*2) - 150, 55, 5)
+    doc.roundedRect(margin + 10, yPos, pageWidth - (margin*2) - 150, itemHeight, 5)
        .fillAndStroke('#F9F9F9', '#EEEEEE');
     doc.restore();
 
@@ -197,6 +206,51 @@ async function drawConsolidatedTicket(doc, data) {
     doc.fillColor(COLORS.lightText).font('Helvetica').fontSize(10)
        .text(`Date: ${dateStr}   |   Slot: ${slotStr}`, margin + 20, yPos + 30);
     
+    let currentY = yPos + 45;
+
+    // Show addons if present
+    if (item.addons && item.addons.length > 0) {
+      doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(9)
+         .text('Add-ons:', margin + 20, currentY);
+      currentY += 12;
+      
+      item.addons.forEach((addon) => {
+        const addonText = `• ${addon.title} x${addon.quantity} (${money(addon.price * addon.quantity)})`;
+        doc.fillColor(COLORS.lightText).font('Helvetica').fontSize(8)
+           .text(addonText, margin + 25, currentY);
+        currentY += 10;
+      });
+      currentY += 5;
+    }
+
+    // Show offer details if present
+    if (item.offer) {
+      doc.fillColor(COLORS.secondary).font('Helvetica-Bold').fontSize(9)
+         .text(`Offer: ${item.offer.title}`, margin + 20, currentY);
+      currentY += 12;
+      
+      let offerText = '';
+      if (item.offer.rule_type === 'buy_x_get_y' && item.offer.buy_qty && item.offer.get_qty) {
+        offerText = `Buy ${item.offer.buy_qty} Get ${item.offer.get_qty}`;
+        if (item.offer.get_discount_type === 'percent' && item.offer.get_discount_value) {
+          offerText += ` (${item.offer.get_discount_value}% off)`;
+        } else if (item.offer.get_discount_type === 'amount' && item.offer.get_discount_value) {
+          offerText += ` (${money(item.offer.get_discount_value)} off)`;
+        } else {
+          offerText += ' Free';
+        }
+      } else if (item.offer.discount_type === 'percent') {
+        offerText = `${item.offer.discount_percent}% discount`;
+      } else if (item.offer.discount_type === 'amount') {
+        offerText = `${money(item.offer.discount_value)} off`;
+      }
+      
+      if (offerText) {
+        doc.fillColor(COLORS.lightText).font('Helvetica').fontSize(8)
+           .text(offerText, margin + 25, currentY);
+      }
+    }
+    
     // Qty Badge
     doc.save();
     doc.circle(pageWidth - 180, yPos + 27, 18).fill(COLORS.accent);
@@ -205,7 +259,7 @@ async function drawConsolidatedTicket(doc, data) {
     doc.fontSize(7).text('PAX', pageWidth - 195, yPos + 33, { width: 30, align: 'center' });
     doc.restore();
 
-    yPos += 65; // Move down for next item
+    yPos += itemHeight + 10; // Move down for next item
   });
 
   // 4. QR Code Area (Right Side)

@@ -13,10 +13,10 @@ function normalizeBaseUrl(raw, fallback) {
     .map((val) => val.trim())
     .filter(Boolean);
   const chosen = parts[0] || fallback || '';
-  return (chosen || fallback || 'https://snowcity-backend-zjlj.onrender.com').replace(/\/+$/, '');
+  return (chosen || fallback || 'https://snowcity-backend-zjlj.onrender.com0').replace(/\/+$/, '');
 }
 
-const APP_URL = normalizeBaseUrl(process.env.APP_URL, 'https://snowcity-backend-zjlj.onrender.com');
+const APP_URL = normalizeBaseUrl(process.env.APP_URL, 'https://snowcity-backend-zjlj.onrender.com0');
 
 let returnUrlCandidate = (process.env.PAYPHI_RETURN_URL || '').trim();
 if (!returnUrlCandidate) {

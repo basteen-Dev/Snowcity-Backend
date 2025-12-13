@@ -136,4 +136,16 @@ async function remove(id) {
   return rowCount > 0;
 }
 
-module.exports = { create, getById, list, update, remove };
+async function bulkDelete(ids) {
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { deletedCount: 0 };
+  }
+  
+  const { rowCount } = await pool.query(
+    `DELETE FROM gallery_items WHERE gallery_item_id = ANY($1::bigint[])`,
+    [ids]
+  );
+  return { deletedCount: rowCount };
+}
+
+module.exports = { create, getById, list, update, remove, bulkDelete };

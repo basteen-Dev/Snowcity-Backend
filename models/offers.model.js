@@ -22,6 +22,13 @@ function mapOffer(row) {
     created_at: row.created_at,
     updated_at: row.updated_at,
     rule_count: row.rule_count != null ? Number(row.rule_count) : undefined,
+    // Buy X Get Y details
+    buy_qty: row.buy_qty,
+    get_qty: row.get_qty,
+    get_target_type: row.get_target_type,
+    get_target_id: row.get_target_id,
+    get_discount_type: row.get_discount_type,
+    get_discount_value: row.get_discount_value,
   };
 }
 
@@ -171,7 +178,21 @@ async function createOffer(payload = {}) {
 }
 
 async function getOfferById(offer_id) {
-  const { rows } = await pool.query(`SELECT * FROM offers WHERE offer_id = $1`, [offer_id]);
+  const { rows } = await pool.query(`
+    SELECT o.*, 
+      -- Buy X Get Y details
+      CASE WHEN o.rule_type = 'buy_x_get_y' THEN orr.buy_qty ELSE NULL END AS buy_qty,
+      CASE WHEN o.rule_type = 'buy_x_get_y' THEN orr.get_qty ELSE NULL END AS get_qty,
+      CASE WHEN o.rule_type = 'buy_x_get_y' THEN orr.get_target_type ELSE NULL END AS get_target_type,
+      CASE WHEN o.rule_type = 'buy_x_get_y' THEN orr.get_target_id ELSE NULL END AS get_target_id,
+      CASE WHEN o.rule_type = 'buy_x_get_y' THEN orr.get_discount_type ELSE NULL END AS get_discount_type,
+      CASE WHEN o.rule_type = 'buy_x_get_y' THEN orr.get_discount_value ELSE NULL END AS get_discount_value
+    FROM offers o
+    LEFT JOIN offer_rules orr ON orr.offer_id = o.offer_id AND orr.rule_id = (
+      SELECT MIN(rule_id) FROM offer_rules WHERE offer_id = o.offer_id
+    )
+    WHERE o.offer_id = $1
+  `, [offer_id]);
   const offer = mapOffer(rows[0]);
   if (!offer) return null;
   const rules = await listOfferRules(offer.offer_id);
@@ -206,8 +227,18 @@ async function listOffers({ active = null, rule_type = null, date = null, q = ''
   const { rows } = await pool.query(
     `SELECT o.*, (
         SELECT COUNT(*) FROM offer_rules r WHERE r.offer_id = o.offer_id
-      ) AS rule_count
+      ) AS rule_count,
+      -- Buy X Get Y details
+      CASE WHEN o.rule_type = 'buy_x_get_y' THEN orr.buy_qty ELSE NULL END AS buy_qty,
+      CASE WHEN o.rule_type = 'buy_x_get_y' THEN orr.get_qty ELSE NULL END AS get_qty,
+      CASE WHEN o.rule_type = 'buy_x_get_y' THEN orr.get_target_type ELSE NULL END AS get_target_type,
+      CASE WHEN o.rule_type = 'buy_x_get_y' THEN orr.get_target_id ELSE NULL END AS get_target_id,
+      CASE WHEN o.rule_type = 'buy_x_get_y' THEN orr.get_discount_type ELSE NULL END AS get_discount_type,
+      CASE WHEN o.rule_type = 'buy_x_get_y' THEN orr.get_discount_value ELSE NULL END AS get_discount_value
      FROM offers o
+     LEFT JOIN offer_rules orr ON orr.offer_id = o.offer_id AND orr.rule_id = (
+       SELECT MIN(rule_id) FROM offer_rules WHERE offer_id = o.offer_id
+     )
      ${whereSql}
      ORDER BY o.created_at DESC
      LIMIT $${i} OFFSET $${i + 1}`,

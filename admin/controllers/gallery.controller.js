@@ -95,3 +95,28 @@ exports.remove = async (req, res, next) => {
     res.json({ deleted: true });
   } catch (err) { next(err); }
 };
+
+exports.bulkDelete = async (req, res, next) => {
+  try {
+    const { ids } = req.body || {};
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+
+    // Validate all IDs
+    const validIds = ids.filter(id => Number.isFinite(Number(id))).map(id => Number(id));
+    if (validIds.length === 0) {
+      return res.status(400).json({ error: 'No valid IDs provided' });
+    }
+
+    // Scope: only admins with full gallery module access can bulk delete
+    const scopes = req.user.scopes || {};
+    const galleryScope = scopes.gallery || [];
+    if (!galleryScope.includes('*')) {
+      return res.status(403).json({ error: 'Forbidden: requires full gallery module access' });
+    }
+
+    const results = await galleryModel.bulkDelete(validIds);
+    res.json({ deleted: results.deletedCount, count: results.deletedCount });
+  } catch (err) { next(err); }
+};

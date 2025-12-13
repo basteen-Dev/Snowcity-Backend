@@ -49,6 +49,25 @@ function mapBooking(row) {
     slot_start_time: row.slot_start_time || null,
     slot_end_time: row.slot_end_time || null,
 
+    // Offer details
+    offer: row.offer_id ? {
+      offer_id: row.offer_id,
+      title: row.offer_title,
+      description: row.offer_description,
+      rule_type: row.offer_rule_type,
+      discount_type: row.offer_discount_type,
+      discount_value: row.offer_discount_value,
+      discount_percent: row.offer_discount_percent,
+      max_discount: row.offer_max_discount,
+      // Buy X Get Y details
+      buy_qty: row.offer_buy_qty,
+      get_qty: row.offer_get_qty,
+      get_target_type: row.offer_get_target_type,
+      get_target_id: row.offer_get_target_id,
+      get_discount_type: row.offer_get_discount_type,
+      get_discount_value: row.offer_get_discount_value
+    } : null,
+
     created_at: row.created_at,
     updated_at: row.updated_at
   };
@@ -97,7 +116,25 @@ async function getBaseSqlParts() {
         -- Slot times (use actual slot timing columns from database)
         b.slot_start_time,
         b.slot_end_time,
-        b.slot_label
+        b.slot_label,
+        
+        -- Offer details
+        o.offer_id,
+        o.title AS offer_title,
+        o.description AS offer_description,
+        o.rule_type AS offer_rule_type,
+        o.discount_type AS offer_discount_type,
+        o.discount_value AS offer_discount_value,
+        o.discount_value AS offer_discount_percent,
+        o.max_discount AS offer_max_discount,
+        
+        -- Buy X Get Y offer details
+        CASE WHEN o.rule_type = 'buy_x_get_y' THEN orr.buy_qty ELSE NULL END AS offer_buy_qty,
+        CASE WHEN o.rule_type = 'buy_x_get_y' THEN orr.get_qty ELSE NULL END AS offer_get_qty,
+        CASE WHEN o.rule_type = 'buy_x_get_y' THEN orr.get_target_type ELSE NULL END AS offer_get_target_type,
+        CASE WHEN o.rule_type = 'buy_x_get_y' THEN orr.get_target_id ELSE NULL END AS offer_get_target_id,
+        CASE WHEN o.rule_type = 'buy_x_get_y' THEN orr.get_discount_type ELSE NULL END AS offer_get_discount_type,
+        CASE WHEN o.rule_type = 'buy_x_get_y' THEN orr.get_discount_value ELSE NULL END AS offer_get_discount_value
     `;
 
     const joins = `
@@ -105,6 +142,10 @@ async function getBaseSqlParts() {
         LEFT JOIN combos      c       ON c.combo_id        = b.combo_id
         LEFT JOIN attractions a1c     ON a1c.attraction_id = c.attraction_1_id
         LEFT JOIN attractions a2c     ON a2c.attraction_id = c.attraction_2_id
+        LEFT JOIN offers o            ON o.offer_id        = b.offer_id
+        LEFT JOIN offer_rules orr     ON orr.offer_id      = o.offer_id AND orr.rule_id = (
+            SELECT MIN(rule_id) FROM offer_rules WHERE offer_id = o.offer_id
+        )
     `;
 
     return { select, joins };
@@ -131,8 +172,35 @@ async function getOrderWithDetails(order_id) {
         `SELECT ${select} FROM bookings b ${joins} WHERE b.order_id = $1 ORDER BY b.created_at ASC`, 
         [order_id]
     );
-    order.items = bookingRes.rows.map(mapBooking);
-
+    
+    // 3. Get Addons for each booking
+    const bookings = [];
+    for (const bookingRow of bookingRes.rows) {
+      const booking = mapBooking(bookingRow);
+      
+      // Fetch addons for this booking
+      const addons = await pool.query(
+        `SELECT ba.*, ad.title AS addon_title, ad.description AS addon_description
+         FROM booking_addons ba
+         JOIN addons ad ON ad.addon_id = ba.addon_id
+         WHERE ba.booking_id = $1
+         ORDER BY ad.title ASC`,
+        [booking.booking_id]
+      );
+      
+      booking.addons = addons.rows.map(addon => ({
+        booking_addon_id: addon.booking_addon_id,
+        addon_id: addon.addon_id,
+        quantity: addon.quantity,
+        price: addon.price,
+        title: addon.addon_title,
+        description: addon.addon_description
+      }));
+      
+      bookings.push(booking);
+    }
+    
+    order.items = bookings;
     return order;
 }
 
@@ -158,7 +226,34 @@ async function listBookings({
     [...params, limit, offset]
   );
 
-  return rows.map(mapBooking);
+  // Get addons for each booking
+  const bookings = [];
+  for (const bookingRow of rows) {
+    const booking = mapBooking(bookingRow);
+    
+    // Fetch addons for this booking
+    const addons = await pool.query(
+      `SELECT ba.*, ad.title AS addon_title, ad.description AS addon_description
+       FROM booking_addons ba
+       JOIN addons ad ON ad.addon_id = ba.addon_id
+       WHERE ba.booking_id = $1
+       ORDER BY ad.title ASC`,
+      [booking.booking_id]
+    );
+    
+    booking.addons = addons.rows.map(addon => ({
+      booking_addon_id: addon.booking_addon_id,
+      addon_id: addon.addon_id,
+      quantity: addon.quantity,
+      price: addon.price,
+      title: addon.addon_title,
+      description: addon.addon_description
+    }));
+    
+    bookings.push(booking);
+  }
+
+  return bookings;
 }
 
 // ---------- WRITE Operations (Transactional Multi-Item) ----------
@@ -562,9 +657,9 @@ async function getBookingsCalendar({ from = null, to = null, attraction_id = nul
     `SELECT 
        b.booking_date,
        COUNT(*) as total_bookings,
-       COUNT(*) FILTER (WHERE b.payment_status = 'Completed') as paid_bookings,
-       SUM(b.quantity) FILTER (WHERE b.payment_status = 'Completed') as total_people,
-       COALESCE(SUM(b.final_amount), SUM(b.total_amount), 0) FILTER (WHERE b.payment_status = 'Completed') as total_revenue
+       COUNT(CASE WHEN b.payment_status = 'Completed' THEN 1 END) as paid_bookings,
+       COALESCE(SUM(CASE WHEN b.payment_status = 'Completed' THEN b.quantity END), 0) as total_people,
+       COALESCE(SUM(CASE WHEN b.payment_status = 'Completed' THEN COALESCE(b.final_amount, b.total_amount, 0) END), 0) as total_revenue
      FROM bookings b
      ${whereSql}
      GROUP BY b.booking_date
@@ -608,13 +703,13 @@ async function getBookingSlotsSummary({ date = null, attraction_id = null, combo
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
   
   const { rows } = await pool.query(
-    `SELECT 
-       CASE 
+    `SELECT
+       CASE
          WHEN b.combo_id IS NOT NULL THEN CONCAT('Combo #', b.combo_id)
          ELSE CONCAT('Attraction #', b.attraction_id)
        END as resource_id,
-       CASE 
-         WHEN b.combo_id IS NOT NULL THEN c.title
+       CASE
+         WHEN b.combo_id IS NOT NULL THEN c.name
          ELSE a.title
        END as resource_title,
        b.booking_time,
@@ -624,9 +719,11 @@ async function getBookingSlotsSummary({ date = null, attraction_id = null, combo
      LEFT JOIN attractions a ON a.attraction_id = b.attraction_id
      LEFT JOIN combos c ON c.combo_id = b.combo_id
      ${whereSql}
-     GROUP BY 
-       CASE WHEN b.combo_id IS NOT NULL THEN b.combo_id ELSE b.attraction_id END,
-       CASE WHEN b.combo_id IS NOT NULL THEN c.title ELSE a.title END,
+     GROUP BY
+       b.combo_id,
+       b.attraction_id,
+       c.name,
+       a.title,
        b.booking_time
      ORDER BY b.booking_time`,
     params

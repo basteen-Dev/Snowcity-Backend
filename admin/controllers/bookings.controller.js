@@ -151,9 +151,36 @@ exports.listBookings = async function listBookings(req, res, next) {
       pool.query(countSql, params),
     ]);
 
+    // Get addons for each booking
+    const bookings = [];
+    for (const bookingRow of rowsRes.rows) {
+      const booking = { ...bookingRow };
+      
+      // Fetch addons for this booking
+      const addons = await pool.query(
+        `SELECT ba.*, ad.title AS addon_title, ad.description AS addon_description
+         FROM booking_addons ba
+         JOIN addons ad ON ad.addon_id = ba.addon_id
+         WHERE ba.booking_id = $1
+         ORDER BY ad.title ASC`,
+        [booking.booking_id]
+      );
+      
+      booking.addons = addons.rows.map(addon => ({
+        booking_addon_id: addon.booking_addon_id,
+        addon_id: addon.addon_id,
+        quantity: addon.quantity,
+        price: addon.price,
+        title: addon.addon_title,
+        description: addon.addon_description
+      }));
+      
+      bookings.push(booking);
+    }
+
     const total = Number(countRes.rows[0]?.count || 0);
     res.json({
-      data: rowsRes.rows,
+      data: bookings,
       meta: { page: p, limit: l, total, totalPages: Math.max(1, Math.ceil(total / l) || 1) },
     });
   } catch (err) {

@@ -101,22 +101,21 @@ router.get('/combo-revenue', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// Daily is just trend with granularity=day
+// Daily detailed analytics with attraction/combo breakdown
 router.get('/daily', async (req, res, next) => {
   try {
-    const { from = null, to = null } = req.query;
+    const { from = null, to = null, attraction_id = null, combo_id = null } = req.query;
     
-    // Apply attraction scope for subadmins
+    // Apply role-based scoping
     const scopes = req.user?.scopes || {};
-    const attractionScope = scopes.attraction || [];
-    let attractionId = null;
     
-    // If subadmin with limited attractions, use first one
-    if (!attractionScope.includes('*') && attractionScope.length > 0) {
-      attractionId = attractionScope[0];
-    }
-    
-    const data = await adminModel.getSalesTrend({ from, to, granularity: 'day', attraction_id: attractionId });
+    const data = await adminModel.getDetailedDailyAnalytics({ 
+      from, 
+      to, 
+      attraction_id, 
+      combo_id, 
+      user_scopes: scopes 
+    });
     res.json(data);
   } catch (err) { next(err); }
 });
