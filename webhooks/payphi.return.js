@@ -42,7 +42,7 @@ const resolveAppBaseUrl = () => {
     .split(',')
     .map((val) => String(val || '').trim())
     .filter(Boolean);
-  const fallback = process.env.APP_PUBLIC_URL || 'https://snowcity-backend-zjlj.onrender.com0';
+  const fallback = process.env.APP_PUBLIC_URL || 'https://snowcity-backend-zjlj.onrender.com';
   const base = entries[0] || fallback;
   return base.replace(/\/$/, '');
 };

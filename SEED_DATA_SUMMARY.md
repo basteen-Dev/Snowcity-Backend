@@ -74,27 +74,27 @@ All images are from Unsplash and optimized for web:
 
 ### View Attractions
 ```bash
-GET https://snowcity-backend-zjlj.onrender.com0/api/attractions
+GET https://snowcity-backend-zjlj.onrender.com/api/attractions
 ```
 
 ### View Slots
 ```bash
-GET https://snowcity-backend-zjlj.onrender.com0/api/slots?attraction_id=1&date=2025-11-08
+GET https://snowcity-backend-zjlj.onrender.com/api/slots?attraction_id=1&date=2025-11-08
 ```
 
 ### View Combos
 ```bash
-GET https://snowcity-backend-zjlj.onrender.com0/api/combos
+GET https://snowcity-backend-zjlj.onrender.com/api/combos
 ```
 
 ### View Banners
 ```bash
-GET https://snowcity-backend-zjlj.onrender.com0/api/banners
+GET https://snowcity-backend-zjlj.onrender.com/api/banners
 ```
 
 ### View Offers
 ```bash
-GET https://snowcity-backend-zjlj.onrender.com0/api/offers
+GET https://snowcity-backend-zjlj.onrender.com/api/offers
 ```
 
 ## 📝 Notes

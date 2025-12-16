@@ -16,6 +16,8 @@ must('initiatePayPhiPaymentAdmin', ctrl.initiatePayPhiPaymentAdmin);
 must('refundPayPhi', ctrl.refundPayPhi);
 must('getBookingCalendar', ctrl.getBookingCalendar);
 must('getBookingSlots', ctrl.getBookingSlots);
+must('resendWhatsApp', ctrl.resendWhatsApp);
+must('sendTestEmail', ctrl.sendTestEmail);
 
 // List + read - No permissions required
 router.get('/', ctrl.listBookings);
@@ -28,6 +30,8 @@ router.post('/', ctrl.createManualBooking);
 router.put('/:id', ctrl.updateBooking);
 router.post('/:id/cancel', ctrl.cancelBooking);
 router.post('/:id/resend-ticket', ctrl.resendTicket);
+router.post('/:id/resend-whatsapp', ctrl.resendWhatsApp);
+router.post('/:id/send-test-email', ctrl.sendTestEmail);
 router.delete('/:id', ctrl.deleteBooking);
 
 // PayPhi (admin) - No permissions required

@@ -3,7 +3,7 @@ require('dotenv').config();
 const { pool } = require('../config/db');
 const logger = require('../config/logger');
 const { sendMail } = require('../config/mailer');
-const { sendWhatsApp } = require('../config/twilio');
+const { sendWhatsApp } = require('../config/interakt');
 
 function getArg(name, def = null) {
   const idx = process.argv.findIndex((a) => a === `--${name}` || a.startsWith(`--${name}=`));

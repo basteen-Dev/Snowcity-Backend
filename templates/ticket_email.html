@@ -1,0 +1,29 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+      body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background:#f6fbff; color:#23395B; margin:0; padding:24px; }
+      .card { background:#ffffff; border-radius:8px; border:1px solid #e6f2ff; padding:20px; max-width:700px; margin:0 auto; }
+      .brand { color:#0B4DA2; font-size:20px; font-weight:700; margin-bottom:6px; }
+      .lead { color:#23527C; margin:6px 0 16px; }
+      .items { margin-top:12px; }
+      .download { margin-top:16px; }
+      .footer { color:#5b6f83; font-size:12px; margin-top:18px; }
+      .primary { color:#0B66D2; }
+      table { width:100%; border-collapse:collapse; }
+      th, td { padding:8px 10px; border:1px solid #eef6ff; text-align:left; }
+      th { background:#f1f9ff; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="brand">SnowCity</div>
+      <div class="lead">Hello {{name}},</div>
+      <div>Thanks for your booking. Your booking reference is <strong>{{booking_ref}}</strong>.</div>
+      <div class="items">{{items_html}}</div>
+      <div class="download">{{download_link}}<a class="primary" href="{{download_link}}">Download your ticket (PDF)</a></div>
+      <div class="footer">Please carry a valid ID. Arrive 15 minutes early. For support, contact support@snowcity.com</div>
+    </div>
+  </body>
+</html>

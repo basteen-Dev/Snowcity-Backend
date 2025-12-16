@@ -27,7 +27,7 @@ async function ensureRole(client, roleName) {
   return ins.rows[0].role_id;
 }
 
-async function register({ name, email, phone = null, password = null, isAdmin = false }) {
+async function register({ name, email, phone = null, password = null, isAdmin = false, whatsapp_consent = false }) {
   // For regular users, password is optional (passwordless)
   // For admin users, password is required
   let password_hash = null;
@@ -42,10 +42,10 @@ async function register({ name, email, phone = null, password = null, isAdmin = 
   const user = await withTransaction(async (client) => {
     // create user
     const { rows } = await client.query(
-      `INSERT INTO users (name, email, phone, password_hash, otp_verified)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING user_id, name, email, phone, otp_verified, last_login_at, created_at, updated_at`,
-      [name, email, phone, password_hash, !!phone ? false : true]
+      `INSERT INTO users (name, email, phone, password_hash, otp_verified, whatsapp_consent)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING user_id, name, email, phone, otp_verified, last_login_at, created_at, updated_at, whatsapp_consent`,
+      [name, email, phone, password_hash, !!phone ? false : true, whatsapp_consent]
     );
     const u = rows[0];
 
@@ -140,7 +140,7 @@ function generateOtp() {
   });
 }
 
-async function sendOtp({ user_id = null, email = null, phone = null, name = null, channel = 'sms', createIfNotExists = false }) {
+async function sendOtp({ user_id = null, email = null, phone = null, name = null, channel = 'sms', createIfNotExists = false, whatsapp_consent = false }) {
   // Resolve user if needed
   let user = null;
   if (user_id) {
@@ -167,25 +167,7 @@ async function sendOtp({ user_id = null, email = null, phone = null, name = null
     }
 
     // Create user without password (passwordless for regular users)
-    user = await withTransaction(async (client) => {
-      const { rows } = await client.query(
-        `INSERT INTO users (name, email, phone, password_hash, otp_verified)
-         VALUES ($1, $2, $3, NULL, FALSE)
-         RETURNING user_id, name, email, phone, otp_verified, last_login_at, created_at, updated_at`,
-        [name, email || null, phone || null]
-      );
-      const u = rows[0];
-
-      // ensure "user" role
-      const roleId = await ensureRole(client, 'user');
-      await client.query(
-        `INSERT INTO user_roles (user_id, role_id)
-         VALUES ($1, $2)
-         ON CONFLICT (user_id, role_id) DO NOTHING`,
-        [u.user_id, roleId]
-      );
-      return u;
-    });
+    user = await register({ name, email, phone, whatsapp_consent });
     logger.info('Created new user via OTP flow', { user_id: user.user_id, email, phone });
   }
 
@@ -222,7 +204,8 @@ async function sendOtp({ user_id = null, email = null, phone = null, name = null
   return { user_id: user.user_id, sent: true, channel, otp: FIXED_TEST_OTP ? otp : undefined };
 }
 
-async function verifyOtp({ user_id, otp, email = null, phone = null }) {
+async function verifyOtp({ user_id, otp, email = null, phone = null, name = null, whatsapp_consent = null }) {
+  console.log('verifyOtp called with whatsapp_consent:', whatsapp_consent);
   // If user_id not provided, try to find user by email or phone
   let userId = user_id;
   if (!userId) {
@@ -269,6 +252,39 @@ async function verifyOtp({ user_id, otp, email = null, phone = null }) {
      WHERE user_id = $1`,
     [userId]
   );
+
+  // Update whatsapp_consent if provided
+  if (whatsapp_consent !== null) {
+    await pool.query(
+      `UPDATE users SET whatsapp_consent = $1, updated_at = NOW() WHERE user_id = $2`,
+      [whatsapp_consent, userId]
+    );
+  }
+
+  // Add to Interakt if consented
+  if (whatsapp_consent) {
+    // Get user details for contact addition
+    const userRes = await pool.query('SELECT name, email, phone FROM users WHERE user_id = $1', [userId]);
+    const userDetails = userRes.rows[0];
+    if (userDetails && userDetails.phone) {
+      const { addContact } = require('../services/interaktService');
+      const addResult = await addContact({ 
+        phone: userDetails.phone, 
+        name: userDetails.name, 
+        email: userDetails.email, 
+        userId 
+      });
+      if (addResult.success) {
+        console.log('User added to Interakt contacts successfully');
+      } else {
+        console.log('Failed to add user to Interakt contacts:', addResult.reason);
+      }
+    } else {
+      console.log('User phone not available for Interakt contact addition');
+    }
+  } else {
+    console.log('User did not consent to WhatsApp');
+  }
 
   // Get user details
   const user = await usersModel.getUserById(userId);

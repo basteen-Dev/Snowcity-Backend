@@ -2,13 +2,13 @@ const authService = require('../../services/authService');
 
 exports.register = async (req, res, next) => {
   try {
-    const { name, email, phone, password } = req.body || {};
+    const { name, email, phone, password, whatsapp_consent = false } = req.body || {};
     if (!name || !email) {
       return res.status(400).json({ error: 'name and email are required' });
     }
     // Password is optional for regular users (passwordless)
     // If password is provided, it's for admin users
-    const out = await authService.register({ name, email, phone, password, isAdmin: !!password });
+    const out = await authService.register({ name, email, phone, password, isAdmin: !!password, whatsapp_consent });
     res.status(201).json(out);
   } catch (err) {
     next(err);
@@ -68,12 +68,12 @@ exports.logout = async (req, res, next) => {
 
 exports.sendOtp = async (req, res, next) => {
   try {
-    const { user_id, email, phone, name, channel = 'sms', createIfNotExists = false } = req.body || {};
+    const { user_id, email, phone, name, channel = 'sms', createIfNotExists = false, whatsapp_consent = false } = req.body || {};
     if (!user_id && !email && !phone) {
       return res.status(400).json({ error: 'Provide user_id or email or phone' });
     }
     // For booking flow, allow creating user if not exists
-    const out = await authService.sendOtp({ user_id, email, phone, name, channel, createIfNotExists });
+    const out = await authService.sendOtp({ user_id, email, phone, name, channel, createIfNotExists, whatsapp_consent });
     res.json(out);
   } catch (err) {
     next(err);
@@ -82,12 +82,12 @@ exports.sendOtp = async (req, res, next) => {
 
 exports.verifyOtp = async (req, res, next) => {
   try {
-    const { user_id, otp, email, phone } = req.body || {};
+    const { user_id, otp, email, phone, name, whatsapp_consent = false } = req.body || {};
     if (!otp) return res.status(400).json({ error: 'otp is required' });
     if (!user_id && !email && !phone) {
       return res.status(400).json({ error: 'Provide user_id or email or phone' });
     }
-    const out = await authService.verifyOtp({ user_id, otp, email, phone });
+    const out = await authService.verifyOtp({ user_id, otp, email, phone, name, whatsapp_consent });
     res.json(out);
   } catch (err) {
     next(err);

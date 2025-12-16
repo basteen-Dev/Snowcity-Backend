@@ -1,6 +1,6 @@
 const notificationsModel = require('../models/notifications.model');
 const { sendMail } = require('../config/mailer');
-const { sendWhatsApp } = require('../config/twilio');
+const { sendWhatsApp } = require('../config/interakt');
 
 async function list(params = {}) {
   return notificationsModel.listNotifications(params);

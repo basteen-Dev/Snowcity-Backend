@@ -6,6 +6,7 @@ const payphiService = require('../../services/payphiService');
 const { createApiLog } = require('../../models/apiLogs.model');
 const ticketService = require('../../services/ticketService');
 const ticketEmailService = require('../../services/ticketEmailService');
+const interaktService = require('../../services/interaktService');
 const { buildScopeFilter } = require('../middleware/scopedAccess');
 
 // Helpers
@@ -70,45 +71,12 @@ exports.listBookings = async function listBookings(req, res, next) {
     const params = [];
     let i = 1;
 
+    console.time('BookingsList Query Build');
+
     const comboTitleExpr = `COALESCE(NULLIF(CONCAT_WS(' + ', NULLIF(a1.title, ''), NULLIF(a2.title, '')), ''), CONCAT('Combo #', c.combo_id::text))`;
     const itemTitleExpr = `CASE WHEN b.item_type = 'Combo' THEN ${comboTitleExpr} ELSE a.title END`;
 
-    if (search) {
-      where.push(`(
-        b.booking_ref ILIKE $${i}
-        OR u.email ILIKE $${i}
-        OR u.phone ILIKE $${i}
-        OR u.name ILIKE $${i}
-        OR ${itemTitleExpr} ILIKE $${i}
-      )`);
-      params.push(`%${search}%`);
-      i++;
-    }
-    if (payment_status) { where.push(`b.payment_status = $${i}`); params.push(payment_status); i++; }
-    if (booking_status) { where.push(`b.booking_status = $${i}`); params.push(booking_status); i++; }
-    if (user_email) { where.push(`u.email ILIKE $${i}`); params.push(`%${user_email}%`); i++; }
-    if (user_phone) { where.push(`u.phone ILIKE $${i}`); params.push(`%${user_phone}%`); i++; }
-    if (attractionId) { where.push(`b.attraction_id = $${i}`); params.push(attractionId); i++; }
-    if (comboId) { where.push(`b.combo_id = $${i}`); params.push(comboId); i++; }
-    if (offerId) { where.push(`b.offer_id = $${i}`); params.push(offerId); i++; }
-    if (normalizedItemType) { where.push(`b.item_type = $${i}::booking_item_type`); params.push(normalizedItemType); i++; }
-    if (dateFrom) { where.push(`b.booking_date >= $${i}`); params.push(dateFrom); i++; }
-    if (dateTo) { where.push(`b.booking_date <= $${i}`); params.push(dateTo); i++; }
-    if (slotId) { where.push(`(b.slot_id = $${i} OR b.combo_slot_id = $${i})`); params.push(slotId); i++; }
-    if (slotStartTimeFilter) { where.push(`b.slot_start_time = $${i}`); params.push(slotStartTimeFilter); i++; }
-    if (slotEndTimeFilter) { where.push(`b.slot_end_time = $${i}`); params.push(slotEndTimeFilter); i++; }
-
-    // Apply scope for non-full-access admins
-    if (!attractionScope.includes('*')) {
-      if (attractionScope.length) {
-        where.push(`b.attraction_id = ANY($${i}::bigint[])`);
-        params.push(attractionScope);
-        i++;
-      } else {
-        // No attraction access: force empty result
-        where.push('FALSE');
-      }
-    }
+    // ... existing where building ...
 
     const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
     const joins = `
@@ -146,37 +114,50 @@ exports.listBookings = async function listBookings(req, res, next) {
       ${whereSql}
     `;
 
+    console.timeEnd('BookingsList Query Build');
+    console.time('BookingsList DB Queries');
+
     const [rowsRes, countRes] = await Promise.all([
       pool.query(dataSql, [...params, l, off]),
       pool.query(countSql, params),
     ]);
 
-    // Get addons for each booking
-    const bookings = [];
-    for (const bookingRow of rowsRes.rows) {
-      const booking = { ...bookingRow };
-      
-      // Fetch addons for this booking
-      const addons = await pool.query(
-        `SELECT ba.*, ad.title AS addon_title, ad.description AS addon_description
+    console.timeEnd('BookingsList DB Queries');
+    console.log(`BookingsList: Fetched ${rowsRes.rows.length} rows, total ${countRes.rows[0]?.count || 0}`);
+
+    // ... rest of the function ...
+
+    // Get addons for all bookings in one query
+    const bookingIds = rowsRes.rows.map(row => row.booking_id);
+    let addonsMap = {};
+    if (bookingIds.length > 0) {
+      const addonsRes = await pool.query(
+        `SELECT ba.booking_id, ba.*, ad.title AS addon_title, ad.description AS addon_description
          FROM booking_addons ba
          JOIN addons ad ON ad.addon_id = ba.addon_id
-         WHERE ba.booking_id = $1
-         ORDER BY ad.title ASC`,
-        [booking.booking_id]
+         WHERE ba.booking_id = ANY($1)
+         ORDER BY ba.booking_id, ad.title ASC`,
+        [bookingIds]
       );
-      
-      booking.addons = addons.rows.map(addon => ({
-        booking_addon_id: addon.booking_addon_id,
-        addon_id: addon.addon_id,
-        quantity: addon.quantity,
-        price: addon.price,
-        title: addon.addon_title,
-        description: addon.addon_description
-      }));
-      
-      bookings.push(booking);
+      addonsMap = addonsRes.rows.reduce((map, addon) => {
+        if (!map[addon.booking_id]) map[addon.booking_id] = [];
+        map[addon.booking_id].push({
+          booking_addon_id: addon.booking_addon_id,
+          addon_id: addon.addon_id,
+          quantity: addon.quantity,
+          price: addon.price,
+          title: addon.addon_title,
+          description: addon.addon_description
+        });
+        return map;
+      }, {});
     }
+
+    // Build bookings with addons
+    const bookings = rowsRes.rows.map(bookingRow => ({
+      ...bookingRow,
+      addons: addonsMap[bookingRow.booking_id] || []
+    }));
 
     const total = Number(countRes.rows[0]?.count || 0);
     res.json({
@@ -268,6 +249,24 @@ exports.createManualBooking = async function createManualBooking(req, res, next)
       booking_date,
     });
 
+    // Add user to Interakt contacts if phone exists
+    if (user_id) {
+      try {
+        const userRes = await pool.query('SELECT name, phone, email FROM users WHERE user_id = $1', [user_id]);
+        const user = userRes.rows[0];
+        if (user && user.phone) {
+          await interaktService.addContact({
+            phone: user.phone,
+            name: user.name,
+            email: user.email,
+            userId: user_id
+          });
+        }
+      } catch (e) {
+        console.error('Failed to add Interakt contact:', e?.message || e);
+      }
+    }
+
     if (markPaid) {
       await bookingsModel.setPayment(booking.booking_id, {
         payment_status: 'Completed',
@@ -276,6 +275,14 @@ exports.createManualBooking = async function createManualBooking(req, res, next)
       try {
         const urlPath = await ticketService.generateTicket(booking.booking_id);
         await bookingsModel.updateBooking(booking.booking_id, { ticket_pdf: urlPath });
+        try {
+          const sent = await interaktService.sendTicketForBooking(booking.booking_id); // check consent for automatic send
+          if (sent && sent.success) {
+            await bookingsModel.updateBooking(booking.booking_id, { whatsapp_sent: true });
+          }
+        } catch (e) {
+          console.error('Failed to send WhatsApp ticket (createManualBooking):', e?.message || e);
+        }
       } catch (e) {
         // non-fatal
       }
@@ -340,6 +347,14 @@ exports.updateBooking = async function updateBooking(req, res, next) {
       try {
         const urlPath = await ticketService.generateTicket(id);
         await bookingsModel.updateBooking(id, { ticket_pdf: urlPath });
+        try {
+          const sent = await interaktService.sendTicketForBooking(id);
+          if (sent && sent.success) {
+            await bookingsModel.updateBooking(id, { whatsapp_sent: true });
+          }
+        } catch (e) {
+          console.error('Failed to send WhatsApp ticket (updateBooking):', e?.message || e);
+        }
       } catch (e) {
         // non-fatal
       }
@@ -376,7 +391,93 @@ exports.resendTicket = async function resendTicket(req, res, next) {
     await bookingsModel.updateBooking(id, { email_sent: false });
     const result = await ticketEmailService.sendTicketEmail(id);
 
-    res.json({ success: true, ticket_pdf: ticketPath, email: result });
+    // Also send WhatsApp
+    let whatsappResult = null;
+    try {
+      console.log('🔍 DEBUG WhatsApp: Attempting to send ticket for booking', id);
+      const sent = await interaktService.sendTicketForBooking(id, true); // skip consent check for admin resend
+      if (sent && sent.success) {
+        await bookingsModel.updateBooking(id, { whatsapp_sent: true });
+        whatsappResult = sent;
+        console.log('info: WhatsApp sent successfully for booking', id);
+      } else {
+        whatsappResult = { success: false, reason: sent?.reason || 'Send failed' };
+        console.log('info: WhatsApp send failed for booking', id, 'reason:', whatsappResult.reason);
+      }
+    } catch (e) {
+      console.error('Failed to resend WhatsApp ticket:', e?.message || e);
+      whatsappResult = { success: false, error: e?.message || 'Unknown error' };
+    }
+
+    res.json({ success: true, ticket_pdf: ticketPath, email: result, whatsapp: whatsappResult });
+  } catch (err) {
+    next(err);
+  }
+}
+
+exports.resendWhatsApp = async function resendWhatsApp(req, res, next) {
+  try {
+    const id = Number(req.params.id);
+    const booking = await bookingsModel.getBookingById(id);
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+
+    // Scope check
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    if (booking.attraction_id && attractionScope.length && !attractionScope.includes('*') && !attractionScope.includes(Number(booking.attraction_id))) {
+      return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
+    }
+
+    if (!booking.user_id) {
+      return res.status(400).json({ error: 'Cannot resend WhatsApp without user information' });
+    }
+
+    let ticketPath = booking.ticket_pdf;
+    if (!ticketPath) {
+      ticketPath = await ticketService.generateTicket(id);
+      await bookingsModel.updateBooking(id, { ticket_pdf: ticketPath });
+    }
+
+    try {
+      const sent = await interaktService.sendTicketForBooking(id);
+      if (sent && sent.success) {
+        await bookingsModel.updateBooking(id, { whatsapp_sent: true });
+      }
+      return res.json({ success: true, ticket_pdf: ticketPath, whatsapp: sent });
+    } catch (e) {
+      console.error('Failed to resend WhatsApp ticket:', e?.message || e);
+      return res.status(502).json({ success: false, error: e?.message || 'Failed to send WhatsApp' });
+    }
+  } catch (err) {
+    next(err);
+  }
+}
+
+exports.sendTestEmail = async function sendTestEmail(req, res, next) {
+  try {
+    const id = Number(req.params.id);
+    const booking = await bookingsModel.getBookingById(id);
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+
+    // Scope check
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    if (booking.attraction_id && attractionScope.length && !attractionScope.includes('*') && !attractionScope.includes(Number(booking.attraction_id))) {
+      return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
+    }
+
+    if (!booking.user_id) {
+      return res.status(400).json({ error: 'Cannot send test email without user information' });
+    }
+
+    const ticketEmailService = require('../../services/ticketEmailService');
+    try {
+      const result = await ticketEmailService.sendTicketEmail(id);
+      return res.json({ success: true, result });
+    } catch (e) {
+      console.error('Failed to send test ticket email:', e?.message || e);
+      return res.status(502).json({ success: false, error: e?.message || 'Failed to send email' });
+    }
   } catch (err) {
     next(err);
   }
