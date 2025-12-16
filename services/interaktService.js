@@ -4,10 +4,8 @@ const axios = require('axios');
 const { pool } = require('../config/db');
 const { APP_URL, interakt } = require('../config/messaging');
 
-const INTERAKT_URL = interakt?.apiUrl || null;
-const INTERAKT_KEY = interakt?.apiKey || null;
-
-// Fix APP_URL if it has comma
+const INTERAKT_URL = interakt?.apiUrl || process.env.INTERAKT_API_URL || null;
+const INTERAKT_KEY = interakt?.apiKey || process.env.INTERAKT_API_KEY || null;
 const FIXED_APP_URL = APP_URL ? APP_URL.split(',')[0].trim() : null;
 
 function normalizePhone(p) {
@@ -19,10 +17,27 @@ function normalizePhone(p) {
   } else if (s.length === 10) {
     return { countryCode: '+91', phoneNumber: s };
   } else if (s.length > 10) {
-    // Take last 10 digits
     return { countryCode: '+91', phoneNumber: s.slice(-10) };
-  } else {
-    return null; // Invalid
+  }
+  return null;
+}
+
+async function axiosPostWithRetries(url, payload, options = {}, retries = 3, backoffMs = 1000) {
+  for (let attempt = 1; attempt <= retries; attempt += 1) {
+    const start = Date.now();
+    try {
+      const res = await axios.post(url, payload, options);
+      const dur = Date.now() - start;
+      console.log(`axiosPostWithRetries success: ${url} attempt=${attempt} duration=${dur}ms`);
+      return res;
+    } catch (err) {
+      const dur = Date.now() - start;
+      const status = err?.response?.status || 'NO_STATUS';
+      console.warn(`axiosPostWithRetries error: ${url} attempt=${attempt} duration=${dur}ms status=${status}`);
+      if (attempt === retries) throw err;
+      const wait = backoffMs * Math.pow(2, attempt - 1);
+      await new Promise((r) => setTimeout(r, wait));
+    }
   }
 }
 
@@ -31,37 +46,29 @@ async function sendWhatsApp({ to, text, mediaUrl } = {}) {
     console.log('Interakt not configured - skipping WhatsApp send');
     return { success: false, reason: 'not-configured' };
   }
-
   if (!to) return { success: false, reason: 'missing-recipient' };
 
   const phone = normalizePhone(to);
   if (!phone) return { success: false, reason: 'invalid-phone' };
-
-  console.log('Interakt phone normalization:', { original: to, normalized: phone });
 
   const payload = {
     countryCode: phone.countryCode,
     phoneNumber: phone.phoneNumber,
     callbackData: 'ticket-send',
     type: mediaUrl ? 'Document' : 'Text',
-    data: mediaUrl ? {
-      message: text || 'Your ticket is attached.',
-      mediaUrl: mediaUrl
-    } : {
-      message: text || ''
-    }
+    data: mediaUrl
+      ? { message: text || 'Your ticket is attached.', mediaUrl }
+      : { message: text || '' }
   };
 
-  console.log('Interakt sending to:', phone.countryCode + phone.phoneNumber, 'payload:', JSON.stringify(payload, null, 2));
+  console.log('Interakt sending to:', phone.countryCode + phone.phoneNumber, 'payload:', JSON.stringify(payload));
 
   try {
-    const res = await axios.post(INTERAKT_URL, payload, {
-      headers: { 
-        Authorization: `Basic ${INTERAKT_KEY}`, 
-        'Content-Type': 'application/json' 
-      },
-      timeout: 10000
-    });
+    const opts = {
+      headers: { Authorization: `Basic ${INTERAKT_KEY}`, 'Content-Type': 'application/json' },
+      timeout: 60000
+    };
+    const res = await axiosPostWithRetries(INTERAKT_URL, payload, opts, 3, 1000);
     return { success: true, response: res.data };
   } catch (err) {
     console.error('Interakt send error:', err?.response?.status, err?.response?.data || err?.message || err);
@@ -72,22 +79,25 @@ async function sendWhatsApp({ to, text, mediaUrl } = {}) {
 async function sendTicketForBooking(bookingId, skipConsentCheck = false) {
   if (!bookingId) return { success: false, reason: 'missing-bookingId' };
 
-  // Get booking details with item title and slot time
+  // Fetch booking with slot start from slots if available
   const comboTitleExpr = `COALESCE(NULLIF(CONCAT_WS(' + ', NULLIF(a1.title, ''), NULLIF(a2.title, '')), ''), CONCAT('Combo #', c.combo_id::text))`;
   const itemTitleExpr = `CASE WHEN b.item_type = 'Combo' THEN ${comboTitleExpr} ELSE a.title END`;
+
   const bRes = await pool.query(`
     SELECT
       b.*,
       u.name AS user_name, u.phone, u.email, u.whatsapp_consent,
       ${itemTitleExpr} AS item_title,
-      b.slot_start_time,
+      COALESCE(s.start_time, cs.start_time, b.slot_start_time) AS slot_start_time,
       b.created_at AS booking_date
     FROM bookings b
     LEFT JOIN users u ON u.user_id = b.user_id
     LEFT JOIN attractions a ON a.attraction_id = b.attraction_id
     LEFT JOIN combos c ON c.combo_id = b.combo_id
     LEFT JOIN attractions a1 ON a1.attraction_id = c.attraction_1_id
-    LEFT JOIN attractions a2 ON a2.attraction_id = c.attraction_2_id
+    LEFT JOIN attractions a2 ON a2.attraction_id = c.combo_id
+    LEFT JOIN attraction_slots s ON s.slot_id = b.slot_id
+    LEFT JOIN combo_slots cs ON cs.combo_slot_id = b.combo_slot_id
     WHERE b.booking_id = $1
   `, [bookingId]);
 
@@ -109,48 +119,39 @@ async function sendTicketForBooking(bookingId, skipConsentCheck = false) {
   }
 
   if (!bRow.phone) return { success: false, reason: 'no-phone' };
-
   const ticketPath = bRow.ticket_pdf || null;
   const mediaUrl = ticketPath ? `${FIXED_APP_URL}${ticketPath}` : null;
-
   if (!mediaUrl) return { success: false, reason: 'no-ticket-pdf' };
 
-  // Format date and time
-  console.log('DEBUG slot_start_time:', bRow.slot_start_time, 'booking_date:', bRow.booking_date);
+  // Build slotDateTime: try to combine booking_date + slot_start_time when slot_start_time is a time string
   let slotDateTime = 'TBD';
-  if (bRow.slot_start_time && bRow.booking_date) {
-    try {
-      // Combine booking date with slot time
-      const bookingDate = new Date(bRow.booking_date);
-      const [hours, minutes, seconds] = bRow.slot_start_time.split(':').map(Number);
-      
-      // Set the time on the booking date
-      bookingDate.setHours(hours, minutes, seconds || 0);
-      
-      console.log('DEBUG combined datetime:', bookingDate);
-      
-      // Format as "Dec 16, 2025 at 2:30 PM"
-      slotDateTime = bookingDate.toLocaleDateString('en-IN', {
-        timeZone: 'Asia/Kolkata',
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      }) + ' at ' + bookingDate.toLocaleTimeString('en-IN', {
-        timeZone: 'Asia/Kolkata',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-      console.log('DEBUG formatted dateTime:', slotDateTime);
-    } catch (e) {
-      console.error('Error formatting date:', e);
-      slotDateTime = 'TBD';
+  try {
+    if (bRow.slot_start_time) {
+      // slot_start_time might be TIME like '10:00:00' or a full datetime
+      if (/^\d{2}:\d{2}:?\d{0,2}$/.test(String(bRow.slot_start_time))) {
+        const bookingDate = new Date(bRow.booking_date || Date.now());
+        const [hh, mm, ss] = String(bRow.slot_start_time).split(':').map((v) => Number(v || 0));
+        bookingDate.setHours(hh || 0, mm || 0, ss || 0, 0);
+        slotDateTime = bookingDate.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', year: 'numeric', month: 'short', day: 'numeric' }) +
+          ' at ' + bookingDate.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
+      } else {
+        // assume it's a full datetime
+        const d = new Date(bRow.slot_start_time);
+        slotDateTime = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', year: 'numeric', month: 'short', day: 'numeric' }) +
+          ' at ' + d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
+      }
     }
+  } catch (e) {
+    console.warn('Failed to compute slotDateTime:', e);
+    slotDateTime = 'TBD';
   }
 
-  // Template payload
+  const phone = normalizePhone(bRow.phone);
+  if (!phone) return { success: false, reason: 'invalid-phone' };
+
   const payload = {
-    countryCode: '+91', // Assuming Indian numbers
-    phoneNumber: bRow.phone.replace(/^\+91/, ''), // Remove country code if present
+    countryCode: phone.countryCode,
+    phoneNumber: phone.phoneNumber,
     callbackData: `ticket-${bRow.booking_id}`,
     type: 'Template',
     template: {
@@ -162,7 +163,7 @@ async function sendTicketForBooking(bookingId, skipConsentCheck = false) {
         bRow.user_name || 'Guest',
         bRow.item_title || 'Activity',
         slotDateTime,
-        bRow.booking_id.toString()
+        String(bRow.booking_id)
       ]
     }
   };
@@ -170,13 +171,8 @@ async function sendTicketForBooking(bookingId, skipConsentCheck = false) {
   console.log('Interakt template send payload:', JSON.stringify(payload, null, 2));
 
   try {
-    const res = await axios.post(INTERAKT_URL, payload, {
-      headers: { 
-        Authorization: `Basic ${INTERAKT_KEY}`, 
-        'Content-Type': 'application/json' 
-      },
-      timeout: 10000
-    });
+    const opts = { headers: { Authorization: `Basic ${INTERAKT_KEY}`, 'Content-Type': 'application/json' }, timeout: 60000 };
+    const res = await axiosPostWithRetries(INTERAKT_URL, payload, opts, 3, 1500);
     console.log('Interakt ticket sent successfully:', res.data);
     return { success: true, response: res.data };
   } catch (err) {
@@ -190,15 +186,10 @@ async function addContact({ phone, name, email, userId }) {
     console.log('Interakt not configured - skipping contact add');
     return { success: false, reason: 'not-configured' };
   }
-
   if (!phone) return { success: false, reason: 'missing-phone' };
 
-  // WhatsApp consent check
   if (userId) {
-    const consentRes = await pool.query(
-      'SELECT whatsapp_consent FROM users WHERE user_id = $1',
-      [userId]
-    );
+    const consentRes = await pool.query('SELECT whatsapp_consent FROM users WHERE user_id = $1', [userId]);
     const user = consentRes.rows[0];
     if (!user || !user.whatsapp_consent) {
       console.log('User has not consented to WhatsApp - skipping contact add');
@@ -209,7 +200,7 @@ async function addContact({ phone, name, email, userId }) {
   const phoneNormalized = normalizePhone(phone);
   if (!phoneNormalized) return { success: false, reason: 'invalid-phone' };
 
-  const payload = {
+  const contactPayload = {
     phoneNumber: phoneNormalized.phoneNumber,
     countryCode: phoneNormalized.countryCode,
     traits: {
@@ -223,38 +214,17 @@ async function addContact({ phone, name, email, userId }) {
     tags: ['snowcity-customer']
   };
 
-  console.log('Interakt addContact payload:', JSON.stringify(payload, null, 2));
+  console.log('Interakt addContact payload:', JSON.stringify(contactPayload, null, 2));
 
   try {
     const INTERAKT_CONTACT_URL = 'https://api.interakt.ai/v1/public/track/users/';
-
-    const res = await axios.post(
-      INTERAKT_CONTACT_URL,
-      payload,
-      {
-        headers: {
-          Authorization: `Basic ${INTERAKT_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 10000
-      }
-    );
-
+    const opts = { headers: { Authorization: `Basic ${INTERAKT_KEY}`, 'Content-Type': 'application/json' }, timeout: 60000 };
+    const res = await axiosPostWithRetries(INTERAKT_CONTACT_URL, contactPayload, opts, 3, 1000);
     console.log('Interakt contact added successfully:', res.data);
     return { success: true, response: res.data };
-
   } catch (err) {
-    if (err?.response?.status === 409) {
-      console.log('Interakt contact already exists');
-      return { success: true, reason: 'already-exists' };
-    }
-
-    console.error(
-      'Interakt add contact error:',
-      err?.response?.status,
-      err?.response?.data || err?.message
-    );
-
+    if (err?.response?.status === 409) return { success: true, reason: 'already-exists' };
+    console.error('Interakt add contact error:', err?.response?.status, err?.response?.data || err?.message);
     return { success: false, reason: err?.response?.status || 'request-failed' };
   }
 }
