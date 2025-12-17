@@ -330,6 +330,7 @@
             .email-container {
                 margin: 0;
                 border-radius: 0;
+                max-width: 100%;
             }
 
             .header, .content, .footer {
@@ -337,19 +338,195 @@
                 padding-right: 20px;
             }
 
+            .header {
+                padding: 20px;
+            }
+
+            .content {
+                padding: 25px 20px;
+            }
+
+            .order-summary,
+            .pricing-section,
+            .payment-info,
+            .billing-address {
+                padding: 20px;
+                margin: 20px 0;
+            }
+
             .items-table {
                 font-size: 12px;
+                display: block;
+                width: 100%;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
             }
 
             .items-table th,
             .items-table td {
                 padding: 8px 6px;
+                font-size: 12px;
+            }
+
+            .items-table th:nth-child(4),
+            .items-table th:nth-child(5),
+            .items-table td:nth-child(4),
+            .items-table td:nth-child(5) {
+                display: none;
             }
 
             .price-row {
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 5px;
+                padding: 8px 0;
+            }
+
+            .price-row:last-child {
+                padding: 12px;
+                margin: 15px -20px -15px -20px;
+            }
+
+            .logo {
+                font-size: 24px;
+            }
+
+            .tagline {
+                font-size: 12px;
+            }
+
+            .greeting {
+                font-size: 18px;
+            }
+
+            .confirmation-message {
+                font-size: 14px;
+                margin-bottom: 20px;
+            }
+
+            .order-title {
+                font-size: 16px;
+                margin-bottom: 10px;
+            }
+
+            .order-number {
+                font-size: 14px;
+                padding: 10px 12px;
+            }
+
+            .item-title {
+                font-size: 14px;
+            }
+
+            .item-details {
+                font-size: 12px;
+            }
+
+            .price-label {
+                font-size: 13px;
+            }
+
+            .price-amount {
+                font-size: 14px;
+            }
+
+            .total-amount {
+                font-size: 16px;
+            }
+
+            .payment-title,
+            .billing-title {
+                font-size: 16px;
+                margin-bottom: 10px;
+            }
+
+            .payment-method,
+            .billing-details {
+                font-size: 13px;
+            }
+
+            .billing-name {
+                font-size: 14px;
+            }
+
+            .cta-button {
+                width: 100%;
+                max-width: 280px;
+                padding: 14px 24px;
+                font-size: 14px;
+                margin: 25px auto;
+            }
+
+            .footer {
+                padding: 20px;
+            }
+
+            .footer-content {
+                font-size: 13px;
+            }
+
+            .footer-link {
+                display: block;
+                margin: 5px 0;
+            }
+        }
+
+        @media only screen and (max-width: 480px) {
+            .header, .content, .footer {
+                padding-left: 15px;
+                padding-right: 15px;
+            }
+
+            .header {
+                padding: 15px;
+            }
+
+            .content {
+                padding: 20px 15px;
+            }
+
+            .order-summary,
+            .pricing-section,
+            .payment-info,
+            .billing-address {
+                padding: 15px;
+                margin: 15px 0;
+            }
+
+            .logo {
+                font-size: 20px;
+            }
+
+            .greeting {
+                font-size: 16px;
+            }
+
+            .confirmation-message {
+                font-size: 13px;
+            }
+
+            .items-table th,
+            .items-table td {
+                padding: 6px 4px;
+                font-size: 11px;
+            }
+
+            .items-table th:nth-child(3),
+            .items-table td:nth-child(3) {
+                display: none;
+            }
+
+            .cta-button {
+                padding: 12px 20px;
+                font-size: 13px;
+            }
+
+            .footer {
+                padding: 15px;
+            }
+
+            .footer-content {
+                font-size: 12px;
             }
         }
     </style>
