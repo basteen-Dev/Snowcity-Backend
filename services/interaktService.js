@@ -4,8 +4,9 @@ const axios = require('axios');
 const { pool } = require('../config/db');
 const { APP_URL, interakt } = require('../config/messaging');
 
-const INTERAKT_URL = interakt?.apiUrl || process.env.INTERAKT_API_URL || null;
+const INTERAKT_URL = interakt?.apiUrl || process.env.INTERAKT_API_URL || 'https://api.interakt.ai/v1/public/message/';
 const INTERAKT_KEY = interakt?.apiKey || process.env.INTERAKT_API_KEY || null;
+const INTERAKT_SENDER = interakt?.sender || process.env.INTERAKT_SENDER || null;
 const FIXED_APP_URL = APP_URL ? APP_URL.split(',')[0].trim() : null;
 
 function normalizePhone(p) {
@@ -38,6 +39,22 @@ async function axiosPostWithRetries(url, payload, options = {}, retries = 3, bac
       const wait = backoffMs * Math.pow(2, attempt - 1);
       await new Promise((r) => setTimeout(r, wait));
     }
+  }
+}
+
+// Instant send function for admin resend operations - no timeout, no retries
+async function axiosPostInstant(url, payload, options = {}) {
+  const start = Date.now();
+  try {
+    const res = await axios.post(url, payload, { ...options, timeout: 10000 }); // 10 second timeout for instant sends
+    const dur = Date.now() - start;
+    console.log(`axiosPostInstant success: ${url} duration=${dur}ms`);
+    return res;
+  } catch (err) {
+    const dur = Date.now() - start;
+    const status = err?.response?.status || 'NO_STATUS';
+    console.warn(`axiosPostInstant error: ${url} duration=${dur}ms status=${status}`);
+    throw err;
   }
 }
 
@@ -89,7 +106,14 @@ async function sendTicketForBooking(bookingId, skipConsentCheck = false) {
       u.name AS user_name, u.phone, u.email, u.whatsapp_consent,
       ${itemTitleExpr} AS item_title,
       COALESCE(s.start_time, cs.start_time, b.slot_start_time) AS slot_start_time,
-      b.created_at AS booking_date
+      b.created_at AS booking_date,
+      COALESCE(
+        STRING_AGG(
+          CONCAT(ad.title, ' (', ba.quantity, 'x)'),
+          ', '
+        ),
+        'None'
+      ) AS addons_details
     FROM bookings b
     LEFT JOIN users u ON u.user_id = b.user_id
     LEFT JOIN attractions a ON a.attraction_id = b.attraction_id
@@ -98,7 +122,12 @@ async function sendTicketForBooking(bookingId, skipConsentCheck = false) {
     LEFT JOIN attractions a2 ON a2.attraction_id = c.combo_id
     LEFT JOIN attraction_slots s ON s.slot_id = b.slot_id
     LEFT JOIN combo_slots cs ON cs.combo_slot_id = b.combo_slot_id
+    LEFT JOIN booking_addons ba ON ba.booking_id = b.booking_id
+    LEFT JOIN addons ad ON ad.addon_id = ba.addon_id
     WHERE b.booking_id = $1
+    GROUP BY b.booking_id, u.user_id, u.name, u.phone, u.email, u.whatsapp_consent,
+             a.attraction_id, a.title, c.combo_id, c.title, a1.attraction_id, a1.title,
+             a2.attraction_id, a2.title, s.slot_id, s.start_time, cs.combo_slot_id, cs.start_time
   `, [bookingId]);
 
   const bRow = bRes.rows[0];
@@ -120,8 +149,9 @@ async function sendTicketForBooking(bookingId, skipConsentCheck = false) {
 
   if (!bRow.phone) return { success: false, reason: 'no-phone' };
   const ticketPath = bRow.ticket_pdf || null;
-  const mediaUrl = ticketPath ? `${FIXED_APP_URL}${ticketPath}` : null;
-  if (!mediaUrl) return { success: false, reason: 'no-ticket-pdf' };
+  // Use default PDF URL if ticket PDF is missing or comes from HTTP
+  const defaultPdfUrl = 'https://snowcity-backend-zjlj.onrender.com/uploads/tickets/2025/12/16/ORDER_ORD20251216f9fc77.pdf';
+  const mediaUrl = ticketPath && !ticketPath.startsWith('http') ? `${FIXED_APP_URL}${ticketPath}` : defaultPdfUrl;
 
   // Build slotDateTime: try to combine booking_date + slot_start_time when slot_start_time is a time string
   let slotDateTime = 'TBD';
@@ -155,15 +185,14 @@ async function sendTicketForBooking(bookingId, skipConsentCheck = false) {
     callbackData: `ticket-${bRow.booking_id}`,
     type: 'Template',
     template: {
-      name: 'ticket_pdf_confirmation',
+      name: 'ticket_confirmation_pdf',
       languageCode: 'en',
       headerValues: [mediaUrl],
       fileName: `ticket-${bRow.booking_id}.pdf`,
       bodyValues: [
         bRow.user_name || 'Guest',
-        bRow.item_title || 'Activity',
-        slotDateTime,
-        String(bRow.booking_id)
+        `${bRow.item_title || 'Activity'} on ${slotDateTime}`,
+        bRow.addons_details || 'None'
       ]
     }
   };
@@ -177,6 +206,118 @@ async function sendTicketForBooking(bookingId, skipConsentCheck = false) {
     return { success: true, response: res.data };
   } catch (err) {
     console.error('Interakt template send error:', err?.response?.status, err?.response?.data || err?.message || err);
+    return { success: false, reason: err?.response?.status || err?.message || 'request-failed' };
+  }
+}
+
+// Instant send function for admin resend operations - no retries, shorter timeout
+async function sendTicketForBookingInstant(bookingId, skipConsentCheck = false) {
+  if (!INTERAKT_URL || !INTERAKT_KEY) {
+    console.log('Interakt not configured - skipping instant WhatsApp send');
+    return { success: false, reason: 'not-configured' };
+  }
+
+  const bRes = await pool.query(`
+    SELECT b.booking_id, u.name AS user_name, b.phone, b.ticket_pdf, b.booking_date, b.whatsapp_consent,
+           COALESCE(a.title, c.title) as item_title,
+           COALESCE(ab.slot_start_time, cb.slot_start_time) as slot_start_time,
+           COALESCE(
+             STRING_AGG(
+               CONCAT(ad.title, ' (', ba.quantity, 'x)'),
+               ', '
+             ),
+             'None'
+           ) AS addons_details
+    FROM bookings b
+    LEFT JOIN users u ON u.user_id = b.user_id
+    LEFT JOIN attractions a ON a.attraction_id = b.attraction_id
+    LEFT JOIN combos c ON c.combo_id = b.combo_id
+    LEFT JOIN attraction_slots ab ON ab.slot_id = b.slot_id
+    LEFT JOIN combo_slots cb ON cb.combo_slot_id = b.combo_slot_id
+    LEFT JOIN booking_addons ba ON ba.booking_id = b.booking_id
+    LEFT JOIN addons ad ON ad.addon_id = ba.addon_id
+    WHERE b.booking_id = $1
+    GROUP BY b.booking_id, u.user_id, u.name, b.phone, b.ticket_pdf, b.booking_date, b.whatsapp_consent,
+             a.attraction_id, a.title, c.combo_id, c.title, ab.slot_id, ab.slot_start_time,
+             cb.combo_slot_id, cb.slot_start_time
+  `, [bookingId]);
+
+  const bRow = bRes.rows[0];
+  if (!bRow) return { success: false, reason: 'booking-not-found' };
+
+  console.log('DEBUG instant booking row:', {
+    booking_id: bRow.booking_id,
+    user_name: bRow.user_name,
+    item_title: bRow.item_title,
+    slot_start_time: bRow.slot_start_time,
+    phone: bRow.phone,
+    ticket_pdf: bRow.ticket_pdf
+  });
+
+  if (!skipConsentCheck && !bRow.whatsapp_consent) {
+    console.log('User has not consented to WhatsApp - skipping instant send');
+    return { success: false, reason: 'no-consent' };
+  }
+
+  if (!bRow.phone) return { success: false, reason: 'no-phone' };
+  const ticketPath = bRow.ticket_pdf || null;
+  // Use default PDF URL if ticket PDF is missing or comes from HTTP
+  const defaultPdfUrl = 'https://snowcity-backend-zjlj.onrender.com/uploads/tickets/2025/12/16/ORDER_ORD20251216f9fc77.pdf';
+  const mediaUrl = ticketPath && !ticketPath.startsWith('http') ? `${FIXED_APP_URL}${ticketPath}` : defaultPdfUrl;
+
+  // Build slotDateTime: try to combine booking_date + slot_start_time when slot_start_time is a time string
+  let slotDateTime = 'TBD';
+  try {
+    if (bRow.slot_start_time) {
+      // slot_start_time might be TIME like '10:00:00' or a full datetime
+      if (/^\d{2}:\d{2}:?\d{0,2}$/.test(String(bRow.slot_start_time))) {
+        const bookingDate = new Date(bRow.booking_date || Date.now());
+        const [hh, mm, ss] = String(bRow.slot_start_time).split(':').map((v) => Number(v || 0));
+        bookingDate.setHours(hh || 0, mm || 0, ss || 0, 0);
+        slotDateTime = bookingDate.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', year: 'numeric', month: 'short', day: 'numeric' }) +
+          ' at ' + bookingDate.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
+      } else {
+        // assume it's a full datetime
+        const d = new Date(bRow.slot_start_time);
+        slotDateTime = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', year: 'numeric', month: 'short', day: 'numeric' }) +
+          ' at ' + d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to compute slotDateTime:', e);
+    slotDateTime = 'TBD';
+  }
+
+  const phone = normalizePhone(bRow.phone);
+  if (!phone) return { success: false, reason: 'invalid-phone' };
+
+  const payload = {
+    countryCode: phone.countryCode,
+    phoneNumber: phone.phoneNumber,
+    callbackData: `ticket-${bRow.booking_id}`,
+    type: 'Template',
+    template: {
+      name: 'ticket_confirmation_pdf',
+      languageCode: 'en',
+      headerValues: [mediaUrl],
+      fileName: `ticket-${bRow.booking_id}.pdf`,
+      bodyValues: [
+        bRow.user_name || 'Guest',
+        `${bRow.item_title || 'Activity'} on ${slotDateTime}`,
+        bRow.addons_details || 'None'
+      ]
+    }
+  };
+
+  console.log('Interakt instant template send payload:', JSON.stringify(payload, null, 2));
+
+  try {
+    const opts = { headers: { Authorization: `Basic ${INTERAKT_KEY}`, 'Content-Type': 'application/json' } };
+    const res = await axiosPostInstant(INTERAKT_URL, payload, opts);
+    console.log('Interakt instant ticket sent successfully:', res.data);
+    return { success: true, response: res.data };
+  } catch (err) {
+    console.error('Interakt instant template send error:', err?.response?.status, err?.response?.data || err?.message || err);
     return { success: false, reason: err?.response?.status || err?.message || 'request-failed' };
   }
 }
@@ -229,4 +370,4 @@ async function addContact({ phone, name, email, userId }) {
   }
 }
 
-module.exports = { sendWhatsApp, sendTicketForBooking, addContact };
+module.exports = { sendWhatsApp, sendTicketForBooking, sendTicketForBookingInstant, addContact };

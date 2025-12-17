@@ -30,7 +30,7 @@ const COLORS = {
 // Helpers
 async function ensureDir(dir) { await fsp.mkdir(dir, { recursive: true }); }
 const exists = (p) => { try { return p && fs.existsSync(p); } catch { return false; } };
-const money = (n) => `₹${Number(n || 0).toFixed(2)}`;
+const money = (n) => `Rs. ${Number(n || 0).toFixed(2)}`;
 const fmtDate = (d) => dayjs(d).format('DD MMM, YYYY');
 
 // Helper: Format time '14:30:00' -> '2:30 PM'

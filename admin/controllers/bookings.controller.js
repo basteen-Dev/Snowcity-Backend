@@ -395,7 +395,7 @@ exports.resendTicket = async function resendTicket(req, res, next) {
     let whatsappResult = null;
     try {
       console.log('🔍 DEBUG WhatsApp: Attempting to send ticket for booking', id);
-      const sent = await interaktService.sendTicketForBooking(id, true); // skip consent check for admin resend
+      const sent = await interaktService.sendTicketForBookingInstant(id, true); // use instant send for admin resend
       if (sent && sent.success) {
         await bookingsModel.updateBooking(id, { whatsapp_sent: true });
         whatsappResult = sent;
@@ -439,7 +439,7 @@ exports.resendWhatsApp = async function resendWhatsApp(req, res, next) {
     }
 
     try {
-      const sent = await interaktService.sendTicketForBooking(id);
+      const sent = await interaktService.sendTicketForBookingInstant(id); // use instant send for admin resend
       if (sent && sent.success) {
         await bookingsModel.updateBooking(id, { whatsapp_sent: true });
       }

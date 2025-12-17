@@ -1,29 +1,464 @@
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snow City Bangalore - Booking Confirmed</title>
     <style>
-      body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background:#f6fbff; color:#23395B; margin:0; padding:24px; }
-      .card { background:#ffffff; border-radius:8px; border:1px solid #e6f2ff; padding:20px; max-width:700px; margin:0 auto; }
-      .brand { color:#0B4DA2; font-size:20px; font-weight:700; margin-bottom:6px; }
-      .lead { color:#23527C; margin:6px 0 16px; }
-      .items { margin-top:12px; }
-      .download { margin-top:16px; }
-      .footer { color:#5b6f83; font-size:12px; margin-top:18px; }
-      .primary { color:#0B66D2; }
-      table { width:100%; border-collapse:collapse; }
-      th, td { padding:8px 10px; border:1px solid #eef6ff; text-align:left; }
-      th { background:#f1f9ff; }
+        /* Reset and base styles */
+        body, table, td, p, a, li, blockquote {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+        table, td {
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+        img {
+            -ms-interpolation-mode: bicubic;
+        }
+
+        /* Base styles */
+        body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: linear-gradient(135deg, #E3F2FD 0%, #F8FBFF 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* Container */
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(25, 118, 210, 0.15);
+            border: 1px solid #E3F2FD;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1976D2 0%, #42A5F5 100%);
+            padding: 30px 40px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            color: #ffffff;
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .tagline {
+            font-size: 14px;
+            color: #E3F2FD;
+            margin: 8px 0 0;
+            opacity: 0.9;
+        }
+
+        /* Content */
+        .content {
+            padding: 50px;
+            background: linear-gradient(135deg, #ffffff 0%, #F8FBFF 100%);
+        }
+
+        .greeting {
+            font-size: 20px;
+            color: #1976D2;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .confirmation-message {
+            font-size: 16px;
+            color: #424242;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        /* Order Summary */
+        .order-summary {
+            background: linear-gradient(135deg, #E3F2FD 0%, #F3E5F5 100%);
+            border-radius: 16px;
+            padding: 30px;
+            margin: 30px 0;
+            border-left: 5px solid #1976D2;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        }
+
+        .order-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: #1976D2;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .order-number {
+            font-size: 16px;
+            color: #1565C0;
+            font-weight: 700;
+            margin-bottom: 20px;
+            background: rgba(255,255,255,0.8);
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid #E3F2FD;
+        }
+
+        /* Items Table */
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            border: 1px solid #E3F2FD;
+        }
+
+        .items-table th {
+            background: linear-gradient(135deg, #1976D2 0%, #42A5F5 100%);
+            color: #ffffff;
+            padding: 16px 12px;
+            text-align: left;
+            font-weight: 700;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #1565C0;
+        }
+
+        .items-table td {
+            padding: 16px 12px;
+            border-bottom: 1px solid #E3F2FD;
+            color: #424242;
+            font-size: 14px;
+            vertical-align: top;
+        }
+
+        .items-table tr:nth-child(even) {
+            background-color: #F8FBFF;
+        }
+
+        .items-table tr:hover {
+            background-color: #E3F2FD;
+            transition: background-color 0.2s ease;
+        }
+
+        .item-title {
+            font-weight: 700;
+            color: #1976D2;
+            font-size: 15px;
+            margin-bottom: 4px;
+        }
+
+        .item-details {
+            color: #666666;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        /* Pricing */
+        .pricing-section {
+            background: linear-gradient(135deg, #F8FBFF 0%, #E3F2FD 100%);
+            border-radius: 12px;
+            padding: 24px;
+            margin: 30px 0;
+            border: 1px solid #E3F2FD;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #E3F2FD;
+        }
+
+        .price-row:last-child {
+            border-bottom: none;
+            border-top: 2px solid #1976D2;
+            margin-top: 20px;
+            padding-top: 20px;
+            background: linear-gradient(135deg, #E3F2FD 0%, #F8FBFF 100%);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px -8px -8px -8px;
+        }
+
+        .price-label {
+            font-weight: 600;
+            color: #424242;
+            font-size: 15px;
+        }
+
+        .price-amount {
+            font-weight: 700;
+            color: #1976D2;
+            font-size: 16px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .total-amount {
+            font-size: 20px;
+            color: #1565C0;
+            font-weight: 800;
+        }
+
+        /* Payment Info */
+        .payment-info {
+            background: linear-gradient(135deg, #E8F5E8 0%, #F1F8E9 100%);
+            border-radius: 12px;
+            padding: 24px;
+            margin: 30px 0;
+            border-left: 5px solid #2E7D32;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+        }
+
+        .payment-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2E7D32;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .payment-method {
+            color: #424242;
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        /* Billing Address */
+        .billing-address {
+            background: linear-gradient(135deg, #FFF3E0 0%, #FFEBE3 100%);
+            border-radius: 12px;
+            padding: 24px;
+            margin: 30px 0;
+            border-left: 5px solid #EF6C00;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+        }
+
+        .billing-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #EF6C00;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .billing-details {
+            color: #424242;
+            line-height: 1.6;
+            font-size: 15px;
+        }
+
+        .billing-name {
+            font-weight: 700;
+            color: #2c84dc;
+            font-size: 16px;
+        }
+
+        /* CTA Button */
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #2c84dc 0%, #1565C0 100%);
+            color: #ffffff;
+            text-decoration: none;
+            padding: 16px 32px;
+            border-radius: 8px;
+            font-weight: 700;
+            text-align: center;
+            margin: 35px 0;
+            box-shadow: 0 6px 20px rgba(11, 77, 162, 0.3);
+            transition: all 0.3s ease;
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .cta-button:hover {
+            background: linear-gradient(135deg, #1565C0 0%, #2c84dc 100%);
+            box-shadow: 0 8px 24px rgba(11, 77, 162, 0.4);
+            transform: translateY(-2px);
+        }
+
+        /* Footer */
+        .footer {
+            background-color: #2c84dc;
+            color: #ffffff;
+            padding: 30px 40px;
+            text-align: center;
+        }
+
+        .footer-content {
+            font-size: 14px;
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+
+        .footer-links {
+            margin-top: 15px;
+        }
+
+        .footer-link {
+            color: #E3F2FD;
+            text-decoration: none;
+            margin: 0 10px;
+            font-weight: 500;
+        }
+
+        .footer-link:hover {
+            text-decoration: underline;
+        }
+
+        .copyright {
+            margin-top: 20px;
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        /* Responsive */
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                margin: 0;
+                border-radius: 0;
+            }
+
+            .header, .content, .footer {
+                padding-left: 20px;
+                padding-right: 20px;
+            }
+
+            .items-table {
+                font-size: 12px;
+            }
+
+            .items-table th,
+            .items-table td {
+                padding: 8px 6px;
+            }
+
+            .price-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+        }
     </style>
-  </head>
-  <body>
-    <div class="card">
-      <div class="brand">SnowCity</div>
-      <div class="lead">Hello {{name}},</div>
-      <div>Thanks for your booking. Your booking reference is <strong>{{booking_ref}}</strong>.</div>
-      <div class="items">{{items_html}}</div>
-      <div class="download">{{download_link}}<a class="primary" href="{{download_link}}">Download your ticket (PDF)</a></div>
-      <div class="footer">Please carry a valid ID. Arrive 15 minutes early. For support, contact support@snowcity.com</div>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <h1 class="logo">Snow City Bangalore</h1>
+            <p class="tagline">Experience the Magic of Snow</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <h2 class="greeting">Booking Confirmed!</h2>
+            <p class="confirmation-message">
+                Hi {{name}},<br><br>
+                Just to let you know — we've received your order, and it is now being processed.
+            </p>
+
+            <!-- Order Summary -->
+            <div class="order-summary">
+                <h3 class="order-title">Order Summary</h3>
+                <p class="order-number">Order #{{order_ref}} ({{order_date}})</p>
+            </div>
+
+            <!-- Items Table -->
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Pax</th>
+                        <th>Add-ons</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{items_html}}
+                </tbody>
+            </table>
+
+            <!-- Pricing Section -->
+            <div class="pricing-section">
+                <div class="price-row">
+                    <span class="price-label">Subtotal:</span>
+                    <span class="price-amount">{{subtotal}}</span>
+                </div>
+                <div class="price-row">
+                    <span class="price-label">Total:</span>
+                    <span class="price-amount total-amount">{{total}}</span>
+                </div>
+            </div>
+
+            <!-- Payment Info -->
+            <div class="payment-info">
+                <h4 class="payment-title">Payment Method</h4>
+                <p class="payment-method">{{payment_method}}</p>
+            </div>
+
+            <!-- Billing Address -->
+            <div class="billing-address">
+                <h4 class="billing-title">Billing Address</h4>
+                <div class="billing-details">
+                    <div class="billing-name">{{billing_name}}</div>
+                    <div>{{billing_phone}}</div>
+                    <div>{{billing_email}}</div>
+                </div>
+            </div>
+
+            <!-- Download Button -->
+            <div style="text-align: center; margin: 35px 0;">
+                <a href="{{download_link}}" class="cta-button" style="display: inline-block; background: linear-gradient(135deg, #1976D2 0%, #42A5F5 100%); color: #ffffff; text-decoration: none; padding: 16px 32px; border-radius: 8px; font-weight: 700; text-align: center; box-shadow: 0 6px 20px rgba(25, 118, 210, 0.3); transition: all 0.3s ease; font-size: 16px; text-transform: uppercase; letter-spacing: 0.5px;">
+                    📥 Download Your Ticket (PDF)
+                </a>
+                <p style="color: #666666; font-size: 14px; margin-top: 12px; font-style: italic;">
+                    Keep this ticket safe for entry verification
+                </p>
+            </div>
+            <div style="margin-top: 35px; padding: 24px; background: linear-gradient(135deg, #F8FBFF 0%, #E3F2FD 100%); border-radius: 12px; border-left: 5px solid #2c84dc; box-shadow: 0 3px 12px rgba(0,0,0,0.08);">
+                <h4 style="color: #2c84dc; margin: 0 0 15px; font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Important Information</h4>
+                <ul style="color: #424242; margin: 0; padding-left: 20px; line-height: 1.8; font-size: 15px;">
+                    <li style="margin-bottom: 8px;">⏰ Please arrive 15 minutes before your scheduled time</li>
+                    <li style="margin-bottom: 8px;">🆔 Carry a valid government-issued ID proof</li>
+                    <li style="margin-bottom: 8px;">🚫 Tickets are non-transferable and non-refundable</li>
+                    <li style="margin-bottom: 8px;">📞 For any queries, contact our support team</li>
+                    <li>🎟️ Show this ticket at the entry gate for verification</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-content">
+                <p>Thank you for choosing Snow City Bangalore!</p>
+                <p>We look forward to providing you with an unforgettable snowy experience.</p>
+
+                <div class="footer-links">
+                    <a href="#" class="footer-link">Visit Website</a>
+                    <a href="#" class="footer-link">Contact Support</a>
+                    <a href="#" class="footer-link">Terms & Conditions</a>
+                </div>
+
+                <div class="copyright">
+                    © 2025 Snow City Bangalore. All rights reserved.
+                </div>
+            </div>
+        </div>
     </div>
-  </body>
+</body>
 </html>

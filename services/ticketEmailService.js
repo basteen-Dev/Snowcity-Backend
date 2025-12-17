@@ -47,12 +47,12 @@ function absoluteFromUrlPath(urlPath) {
 }
 
 function formatMoney(n) {
-  return `₹${Number(n || 0).toFixed(2)}`;
+  return `Rs. ${Number(n || 0).toFixed(2)}`;
 }
 
 function buildItemsHtml(items = []) {
-  if (!items.length) return '<em>No items found</em>';
-  
+  if (!items.length) return '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #666;">No items found</td></tr>';
+
   // Helper function to format time to 12-hour format
   function formatTime12Hour(time24) {
     if (!time24) return '';
@@ -62,10 +62,25 @@ function buildItemsHtml(items = []) {
     const hour12 = hour % 12 || 12;
     return `${hour12}:${minutes} ${ampm}`;
   }
-  
+
+  // Helper function to format date
+  function formatDate(dateStr) {
+    if (!dateStr) return '';
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch {
+      return dateStr;
+    }
+  }
+
   const rows = items.map((item) => {
     const title = item.item_title || (item.item_type === 'Combo' ? 'Combo Booking' : 'Attraction Ticket');
-    
+
     // Debug logging
     console.log('🔍 DEBUG Email Service item:', {
       booking_id: item.booking_id,
@@ -74,45 +89,44 @@ function buildItemsHtml(items = []) {
       booking_time: item.booking_time,
       slot_label: item.slot_label
     });
-    
-    let slot;
+
+    let slotTime;
     if (item.slot_start_time && item.slot_end_time) {
-      slot = `${formatTime12Hour(item.slot_start_time)} - ${formatTime12Hour(item.slot_end_time)}`;
-      console.log('🔍 DEBUG Email using formatted slot_start_time/end_time:', slot);
+      slotTime = `${formatTime12Hour(item.slot_start_time)} - ${formatTime12Hour(item.slot_end_time)}`;
+      console.log('🔍 DEBUG Email using formatted slot_start_time/end_time:', slotTime);
     } else if (item.booking_time) {
-      slot = formatTime12Hour(item.booking_time);
-      console.log('🔍 DEBUG Email using formatted booking_time:', slot);
+      slotTime = formatTime12Hour(item.booking_time);
+      console.log('🔍 DEBUG Email using formatted booking_time:', slotTime);
     } else if (item.slot_label) {
-      slot = item.slot_label;
-      console.log('🔍 DEBUG Email using slot_label:', slot);
+      slotTime = item.slot_label;
+      console.log('🔍 DEBUG Email using slot_label:', slotTime);
     } else {
-      slot = 'Open Slot';
-      console.log('🔍 DEBUG Email using fallback:', slot);
+      slotTime = 'Open Slot';
+      console.log('🔍 DEBUG Email using fallback:', slotTime);
     }
-    
+
+    const bookingDate = formatDate(item.booking_date);
+    const quantity = item.quantity || 1;
+    const addons = item.addons || [];
+    const addonsText = addons.length > 0
+      ? addons.map(addon => `×${addon.quantity || 1} ${addon.title || 'Addon'}`).join(', ')
+      : '-';
+
     return `
       <tr>
-        <td style="padding:6px 8px;border:1px solid #eee">${title}</td>
-        <td style="padding:6px 8px;border:1px solid #eee">${item.booking_date || '-'}</td>
-        <td style="padding:6px 8px;border:1px solid #eee">${slot}</td>
-        <td style="padding:6px 8px;border:1px solid #eee">${item.quantity || 1}</td>
-        <td style="padding:6px 8px;border:1px solid #eee">${formatMoney(item.final_amount || item.total_amount)}</td>
+        <td style="padding:15px 12px;border-bottom:1px solid #E3F2FD;">
+          <div class="item-title">${title}</div>
+          <div class="item-details">Booking ID: ${item.booking_id || item.booking_ref || '-'}</div>
+        </td>
+        <td style="padding:15px 12px;border-bottom:1px solid #E3F2FD;">${bookingDate}</td>
+        <td style="padding:15px 12px;border-bottom:1px solid #E3F2FD;">${slotTime}</td>
+        <td style="padding:15px 12px;border-bottom:1px solid #E3F2FD;">${quantity}</td>
+        <td style="padding:15px 12px;border-bottom:1px solid #E3F2FD;">${addonsText}</td>
+        <td style="padding:15px 12px;border-bottom:1px solid #E3F2FD;font-weight:600;color:#0B4DA2;">${formatMoney(item.final_amount || item.total_amount)}</td>
       </tr>`;
   }).join('');
 
-  return `
-    <table style="width:100%;border-collapse:collapse;margin-top:10px">
-      <thead>
-        <tr style="background:#f4f4f4">
-          <th style="padding:6px 8px;border:1px solid #eee;text-align:left">Item</th>
-          <th style="padding:6px 8px;border:1px solid #eee;text-align:left">Date</th>
-          <th style="padding:6px 8px;border:1px solid #eee;text-align:left">Slot</th>
-          <th style="padding:6px 8px;border:1px solid #eee;text-align:left">Qty</th>
-          <th style="padding:6px 8px;border:1px solid #eee;text-align:left">Amount</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>`;
+  return rows;
 }
 
 async function sendTicketEmail(booking_id) {
@@ -124,19 +138,40 @@ async function sendTicketEmail(booking_id) {
   const to = user?.email || null;
   if (!to) return { sent: false, skipped: true, reason: 'No user email' };
 
-  const subject = `Your SnowCity Ticket — ${b.booking_ref}`;
-  const text = `Hello${user?.name ? ' ' + user.name : ''},\n\nAttached is your SnowCity ticket.\nBooking Ref: ${b.booking_ref}\nAttraction ID: ${b.attraction_id}\nQuantity: ${b.quantity}\nAmount Paid: ${Number(b.final_amount || 0).toFixed(2)}\n\nEnjoy your visit!`;
-  const html = `
-    ${renderTicketTemplate({
-      name: user?.name || '',
-      booking_ref: b.booking_ref,
-      attraction_id: b.attraction_id,
-      quantity: b.quantity,
-      amount: Number(b.final_amount || 0).toFixed(2),
-      items_html: buildItemsHtml([b]) ,
-      download_link: b.ticket_pdf ? `${APP_URL}${b.ticket_pdf}` : ''
-    })}
-  `;
+  // Get order details for complete information
+  const order = b.order_id ? await bookingsModel.getOrderWithDetails(b.order_id) : null;
+
+  const subject = `Snow City Bangalore - Booking Confirmed!`;
+  const text = `Hello${user?.name ? ' ' + user.name : ''},\n\nYour Snow City Bangalore booking has been confirmed.\nBooking Ref: ${b.booking_ref}\n\nEnjoy your visit!`;
+
+  // Format order date
+  const orderDate = order?.created_at ? new Date(order.created_at).toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  }) : new Date().toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+
+  // Calculate totals
+  const subtotal = order?.total_amount || b.final_amount || b.total_amount || 0;
+  const total = subtotal; // Assuming no additional fees for now
+
+  const html = renderTicketTemplate({
+    name: user?.name || '',
+    order_ref: b.booking_ref || b.booking_id,
+    order_date: orderDate,
+    items_html: buildItemsHtml([b]),
+    subtotal: formatMoney(subtotal),
+    total: formatMoney(total),
+    payment_method: order?.payment_mode || b.payment_mode || 'Online Payment',
+    billing_name: user?.name || '',
+    billing_phone: user?.phone || '',
+    billing_email: user?.email || '',
+    download_link: b.ticket_pdf ? `${APP_URL}${b.ticket_pdf}` : ''
+  });
 
   const attachments = [];
   if (b.ticket_pdf) {
@@ -162,18 +197,36 @@ async function sendOrderEmail(order_id) {
   if (!to) return { sent: false, skipped: true, reason: 'No user email' };
 
   const greetingName = user?.name ? ` ${user.name}` : '';
-  const subject = `SnowCity Order ${order.order_ref || order.order_id}`;
-  const plainItems = (order.items || []).map((item, idx) => {
-    const title = item.item_title || `Item ${idx + 1}`;
-    return `${idx + 1}. ${title} — Qty ${item.quantity || 1} — ${formatMoney(item.final_amount || item.total_amount)}`;
-  }).join('\n');
+  const subject = `Snow City Bangalore - Booking Confirmed!`;
 
-  const text = `Hello${greetingName},\n\nThank you for your purchase at SnowCity.\nOrder Ref: ${order.order_ref || order.order_id}\nTotal Paid: ${formatMoney(order.final_amount || order.total_amount)}\n\nItems:\n${plainItems || '-'}\n\nYour ticket PDF is attached. Enjoy your visit!`;
+  // Format order date
+  const orderDate = order.created_at ? new Date(order.created_at).toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  }) : new Date().toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+
+  // Calculate totals
+  const subtotal = order.total_amount || 0;
+  const total = order.final_amount || subtotal;
+
+  const text = `Hello${greetingName},\n\nThank you for your purchase at Snow City Bangalore.\nOrder Ref: ${order.order_ref || order.order_id}\nTotal Paid: ${formatMoney(total)}\n\nYour ticket PDF is attached. Enjoy your visit!`;
 
   const html = renderTicketTemplate({
     name: user?.name || '',
-    booking_ref: order.order_ref || order.order_id,
+    order_ref: order.order_ref || order.order_id,
+    order_date: orderDate,
     items_html: buildItemsHtml(order.items || []),
+    subtotal: formatMoney(subtotal),
+    total: formatMoney(total),
+    payment_method: order.payment_mode || 'Online Payment',
+    billing_name: user?.name || '',
+    billing_phone: user?.phone || '',
+    billing_email: user?.email || '',
     download_link: (order.items && order.items[0] && order.items[0].ticket_pdf) ? `${APP_URL}${order.items[0].ticket_pdf}` : ''
   });
 

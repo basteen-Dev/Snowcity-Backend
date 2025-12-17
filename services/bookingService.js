@@ -20,6 +20,7 @@ const phonepe = require('../config/phonepe');
 const payphiService = require('./payphiService');
 const ticketService = require('./ticketService');
 const ticketEmailService = require('./ticketEmailService');
+const interaktService = require('./interaktService');
 const { sendWhatsapp } = require('./twilioService');
 
 const toNumber = (n, d = 0) => (Number.isFinite(Number(n)) ? Number(n) : d);
@@ -712,12 +713,22 @@ async function checkPayPhiStatus(orderId) {
         try {
             const urlPath = await ticketService.generateTicket(row.booking_id);
             await pool.query(`UPDATE bookings SET ticket_pdf = $1 WHERE booking_id = $2`, [urlPath, row.booking_id]);
-            await ticketEmailService.sendTicketEmail(row.booking_id);
+            
+            // Send WhatsApp ticket
+            try {
+                const whatsappSent = await interaktService.sendTicketForBooking(row.booking_id);
+                if (whatsappSent && whatsappSent.success) {
+                    await pool.query(`UPDATE bookings SET whatsapp_sent = true WHERE booking_id = $1`, [row.booking_id]);
+                }
+            } catch (whatsappErr) {
+                console.error(`WhatsApp ticket workflow failed for booking ${row.booking_id}`, whatsappErr);
+            }
         } catch (err) {
-            console.error(`Ticket email workflow failed for booking ${row.booking_id}`, err);
+            console.error(`Ticket workflow failed for booking ${row.booking_id}`, err);
         }
     }
 
+    // Send single combined email for the entire order
     try {
         await ticketEmailService.sendOrderEmail(order.order_id);
     } catch (err) {
