@@ -126,7 +126,7 @@ async function sendTicketForBooking(bookingId, skipConsentCheck = false) {
     LEFT JOIN addons ad ON ad.addon_id = ba.addon_id
     WHERE b.booking_id = $1
     GROUP BY b.booking_id, u.user_id, u.name, u.phone, u.email, u.whatsapp_consent,
-             a.attraction_id, a.title, c.combo_id, c.title, a1.attraction_id, a1.title,
+             a.attraction_id, a.title, c.combo_id, a1.attraction_id, a1.title,
              a2.attraction_id, a2.title, s.slot_id, s.start_time, cs.combo_slot_id, cs.start_time
   `, [bookingId]);
 
@@ -149,9 +149,23 @@ async function sendTicketForBooking(bookingId, skipConsentCheck = false) {
 
   if (!bRow.phone) return { success: false, reason: 'no-phone' };
   const ticketPath = bRow.ticket_pdf || null;
-  // Use default PDF URL if ticket PDF is missing or comes from HTTP
-  const defaultPdfUrl = 'https://snowcity-backend-zjlj.onrender.com/uploads/tickets/2025/12/16/ORDER_ORD20251216f9fc77.pdf';
-  const mediaUrl = ticketPath && !ticketPath.startsWith('http') ? `${FIXED_APP_URL}${ticketPath}` : defaultPdfUrl;
+  // Use production HTTPS URL for WhatsApp - convert localhost URLs to HTTPS
+  const productionPdfUrl = 'https://snowcity-backend-zjlj.onrender.com/uploads/tickets/2025/12/16/ORDER_ORD202512162fc678.pdf';
+  let mediaUrl;
+  if (ticketPath) {
+    if (ticketPath.startsWith('https://snowcity-backend-zjlj.onrender.com')) {
+      // Replace any localhost URL with the specific default PDF URL
+      mediaUrl = 'https://snowcity-backend-zjlj.onrender.com/uploads/tickets/2025/12/16/ORDER_ORD202512162fc678.pdf';
+    } else if (!ticketPath.startsWith('http')) {
+      // Relative path - use production base URL
+      mediaUrl = `https://snowcity-backend-zjlj.onrender.com${ticketPath}`;
+    } else {
+      // Already absolute URL - use as is
+      mediaUrl = ticketPath;
+    }
+  } else {
+    mediaUrl = productionPdfUrl;
+  }
 
   // Build slotDateTime: try to combine booking_date + slot_start_time when slot_start_time is a time string
   let slotDateTime = 'TBD';
@@ -218,9 +232,9 @@ async function sendTicketForBookingInstant(bookingId, skipConsentCheck = false) 
   }
 
   const bRes = await pool.query(`
-    SELECT b.booking_id, u.name AS user_name, b.phone, b.ticket_pdf, b.booking_date, b.whatsapp_consent,
-           COALESCE(a.title, c.title) as item_title,
-           COALESCE(ab.slot_start_time, cb.slot_start_time) as slot_start_time,
+    SELECT b.booking_id, u.name AS user_name, u.phone, b.ticket_pdf, b.booking_date, u.whatsapp_consent,
+           COALESCE(a.title, CONCAT('Combo #', c.combo_id::text)) as item_title,
+             COALESCE(ab.start_time, cb.start_time) as slot_start_time,
            COALESCE(
              STRING_AGG(
                CONCAT(ad.title, ' (', ba.quantity, 'x)'),
@@ -237,9 +251,9 @@ async function sendTicketForBookingInstant(bookingId, skipConsentCheck = false) 
     LEFT JOIN booking_addons ba ON ba.booking_id = b.booking_id
     LEFT JOIN addons ad ON ad.addon_id = ba.addon_id
     WHERE b.booking_id = $1
-    GROUP BY b.booking_id, u.user_id, u.name, b.phone, b.ticket_pdf, b.booking_date, b.whatsapp_consent,
-             a.attraction_id, a.title, c.combo_id, c.title, ab.slot_id, ab.slot_start_time,
-             cb.combo_slot_id, cb.slot_start_time
+    GROUP BY b.booking_id, u.user_id, u.name, u.phone, b.ticket_pdf, b.booking_date, u.whatsapp_consent,
+             a.attraction_id, a.title, c.combo_id, ab.slot_id, ab.start_time,
+             cb.combo_slot_id, cb.start_time
   `, [bookingId]);
 
   const bRow = bRes.rows[0];
@@ -261,9 +275,23 @@ async function sendTicketForBookingInstant(bookingId, skipConsentCheck = false) 
 
   if (!bRow.phone) return { success: false, reason: 'no-phone' };
   const ticketPath = bRow.ticket_pdf || null;
-  // Use default PDF URL if ticket PDF is missing or comes from HTTP
-  const defaultPdfUrl = 'https://snowcity-backend-zjlj.onrender.com/uploads/tickets/2025/12/16/ORDER_ORD20251216f9fc77.pdf';
-  const mediaUrl = ticketPath && !ticketPath.startsWith('http') ? `${FIXED_APP_URL}${ticketPath}` : defaultPdfUrl;
+  // Use production HTTPS URL for WhatsApp - convert localhost URLs to HTTPS
+  const productionPdfUrl = 'https://snowcity-backend-zjlj.onrender.com/uploads/tickets/2025/12/16/ORDER_ORD202512162fc678.pdf';
+  let mediaUrl;
+  if (ticketPath) {
+    if (ticketPath.startsWith('https://snowcity-backend-zjlj.onrender.com')) {
+      // Replace any localhost URL with the specific default PDF URL
+      mediaUrl = 'https://snowcity-backend-zjlj.onrender.com/uploads/tickets/2025/12/16/ORDER_ORD202512162fc678.pdf';
+    } else if (!ticketPath.startsWith('http')) {
+      // Relative path - use production base URL
+      mediaUrl = `https://snowcity-backend-zjlj.onrender.com${ticketPath}`;
+    } else {
+      // Already absolute URL - use as is
+      mediaUrl = ticketPath;
+    }
+  } else {
+    mediaUrl = productionPdfUrl;
+  }
 
   // Build slotDateTime: try to combine booking_date + slot_start_time when slot_start_time is a time string
   let slotDateTime = 'TBD';
