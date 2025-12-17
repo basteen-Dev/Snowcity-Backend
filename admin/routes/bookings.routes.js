@@ -17,6 +17,7 @@ must('refundPayPhi', ctrl.refundPayPhi);
 must('getBookingCalendar', ctrl.getBookingCalendar);
 must('getBookingSlots', ctrl.getBookingSlots);
 must('resendWhatsApp', ctrl.resendWhatsApp);
+must('resendEmail', ctrl.resendEmail);
 must('sendTestEmail', ctrl.sendTestEmail);
 
 // List + read - No permissions required
@@ -31,6 +32,7 @@ router.put('/:id', ctrl.updateBooking);
 router.post('/:id/cancel', ctrl.cancelBooking);
 router.post('/:id/resend-ticket', ctrl.resendTicket);
 router.post('/:id/resend-whatsapp', ctrl.resendWhatsApp);
+router.post('/:id/resend-email', ctrl.resendEmail);
 router.post('/:id/send-test-email', ctrl.sendTestEmail);
 router.delete('/:id', ctrl.deleteBooking);
 

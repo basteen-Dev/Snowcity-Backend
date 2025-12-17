@@ -29,7 +29,7 @@ const resolveClientBaseUrl = () => {
     .split(',')
     .map((val) => String(val || '').trim())
     .filter(Boolean);
-  const fallback = process.env.NODE_ENV === 'development'
+  const fallback = process.env.NODE_ENV === 'production'
     ? 'https://snowpark.netlify.app'
     : 'https://snowpark.netlify.app';
   const base = entries[0] || fallback;

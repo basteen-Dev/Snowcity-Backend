@@ -453,6 +453,42 @@ exports.resendWhatsApp = async function resendWhatsApp(req, res, next) {
   }
 }
 
+exports.resendEmail = async function resendEmail(req, res, next) {
+  try {
+    const id = Number(req.params.id);
+    const booking = await bookingsModel.getBookingById(id);
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+
+    // Scope check
+    const scopes = req.user.scopes || {};
+    const attractionScope = scopes.attraction || [];
+    if (booking.attraction_id && attractionScope.length && !attractionScope.includes('*') && !attractionScope.includes(Number(booking.attraction_id))) {
+      return res.status(403).json({ error: 'Forbidden: attraction not in scope' });
+    }
+
+    if (!booking.user_id) {
+      return res.status(400).json({ error: 'Cannot resend email without user information' });
+    }
+
+    let ticketPath = booking.ticket_pdf;
+    if (!ticketPath) {
+      ticketPath = await ticketService.generateTicket(id);
+      await bookingsModel.updateBooking(id, { ticket_pdf: ticketPath });
+    }
+
+    await bookingsModel.updateBooking(id, { email_sent: false });
+    try {
+      const result = await ticketEmailService.sendTicketEmail(id);
+      return res.json({ success: true, ticket_pdf: ticketPath, email: result });
+    } catch (e) {
+      console.error('Failed to resend ticket email:', e?.message || e);
+      return res.status(502).json({ success: false, error: e?.message || 'Failed to send email' });
+    }
+  } catch (err) {
+    next(err);
+  }
+}
+
 exports.sendTestEmail = async function sendTestEmail(req, res, next) {
   try {
     const id = Number(req.params.id);
