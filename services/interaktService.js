@@ -9,6 +9,74 @@ const INTERAKT_KEY = interakt?.apiKey || process.env.INTERAKT_API_KEY || null;
 const INTERAKT_SENDER = interakt?.sender || process.env.INTERAKT_SENDER || null;
 const FIXED_APP_URL = APP_URL ? APP_URL.split(',')[0].trim() : null;
 
+function formatTime12h(t) {
+  if (!t) return '';
+  const timeStr = String(t).trim();
+  
+  // Handle various time formats
+  let onlyTime = timeStr;
+  if (timeStr.includes('T')) {
+    onlyTime = timeStr.split('T')[1] || timeStr;
+  } else if (timeStr.includes(' ')) {
+    onlyTime = timeStr.split(' ')[0];
+  }
+  
+  // Remove any trailing timezone info
+  onlyTime = onlyTime.split('.')[0];
+  
+  const parts = onlyTime.split(':');
+  if (parts.length < 2) return '';
+  
+  const h = Number(parts[0]);
+  const m = Number(parts[1]);
+  
+  if (Number.isNaN(h) || Number.isNaN(m)) return '';
+  
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  
+  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
+function formatDateIN(d) {
+  if (!d) return '';
+  try {
+    const dt = new Date(d);
+    if (Number.isNaN(dt.getTime())) return '';
+    return dt.toLocaleDateString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  } catch {
+    return '';
+  }
+}
+
+function formatSlotRange(row) {
+  const start = formatTime12h(row?.slot_start_time || row?.start_time || row?.booking_time);
+  const end = formatTime12h(row?.slot_end_time || row?.end_time);
+  
+  if (start && end) {
+    return `${start} - ${end}`;
+  }
+  if (start) {
+    return start;
+  }
+  if (row?.slot_label) {
+    return String(row.slot_label);
+  }
+  return 'Open Entry';
+}
+
+function resolveMediaUrl(ticketPath) {
+  const base = FIXED_APP_URL || 'https://snowcity-backend-zjlj.onrender.com';
+  if (!ticketPath) return null;
+  if (/^https?:/i.test(ticketPath)) return ticketPath;
+  return `${base.replace(/\/$/, '')}${String(ticketPath).startsWith('/') ? '' : '/'}${ticketPath}`;
+}
+
 function normalizePhone(p) {
   if (!p) return null;
   let s = String(p).trim();
@@ -21,6 +89,180 @@ function normalizePhone(p) {
     return { countryCode: '+91', phoneNumber: s.slice(-10) };
   }
   return null;
+}
+
+async function buildTicketTemplateDataForOrder(orderId) {
+  const ordRes = await pool.query(
+    `SELECT o.order_id, o.order_ref, o.user_id, u.name AS user_name, u.phone, u.whatsapp_consent
+     FROM orders o
+     LEFT JOIN users u ON u.user_id = o.user_id
+     WHERE o.order_id = $1`,
+    [orderId]
+  );
+
+  const ord = ordRes.rows[0];
+  if (!ord) return null;
+
+  const bookingsModel = require('../models/bookings.model');
+  const order = await bookingsModel.getOrderWithDetails(orderId);
+  if (!order) return null;
+
+  const items = Array.isArray(order.items) ? order.items : [];
+  const primary = items.filter((x) => !x.parent_booking_id);
+  const effectiveItems = primary.length ? primary : items;
+
+  // Group attractions by date for better formatting
+  const attractionsByDate = new Map();
+  
+  effectiveItems.forEach((it) => {
+    const title = it.item_title || it.attraction_title || it.combo_title || (it.item_type === 'Combo' ? 'Combo' : 'Attraction');
+    const qty = Number(it.quantity || 1);
+    const dateStr = formatDateIN(it.booking_date) || '';
+    const slotStr = formatSlotRange(it);
+    
+    const dateKey = dateStr || 'Date TBD';
+    
+    if (!attractionsByDate.has(dateKey)) {
+      attractionsByDate.set(dateKey, []);
+    }
+    
+    attractionsByDate.get(dateKey).push({
+      title,
+      qty,
+      time: slotStr
+    });
+  });
+  
+  // Build formatted attractions text
+  const attractionLines = [];
+  
+  attractionsByDate.forEach((attractions, date) => {
+    const attractionDetails = attractions.map(attr => {
+      const timeStr = attr.time ? ` (${attr.time})` : '';
+      return `${attr.title} (Qty: ${attr.qty})${timeStr}`;
+    }).join(', ');
+    
+    attractionLines.push(`${date}: ${attractionDetails}`);
+  });
+  
+  const itemsText = attractionLines.length ? attractionLines.join('\n') : 'Booking details unavailable';
+
+  const addonMap = new Map();
+  effectiveItems.forEach((it) => {
+    const addons = Array.isArray(it.addons) ? it.addons : [];
+    addons.forEach((a) => {
+      const key = String(a.addon_id || a.title || a.addon_title || '').trim();
+      if (!key) return;
+      const name = a.title || a.addon_title || 'Addon';
+      const qty = Number(a.quantity || 0);
+      if (!addonMap.has(key)) addonMap.set(key, { name, qty: 0 });
+      addonMap.get(key).qty += qty;
+    });
+  });
+  const addonLines = Array.from(addonMap.values())
+    .filter((x) => x.qty > 0)
+    .sort((a, b) => String(a.name).localeCompare(String(b.name)))
+    .map((x) => `${x.name} (${x.qty}x)`);
+  const addonsText = addonLines.length ? addonLines.join('\n') : 'None';
+
+  const firstTicket = (items.find((x) => x.ticket_pdf) || {}).ticket_pdf || null;
+  const mediaUrl = resolveMediaUrl(firstTicket);
+
+  return {
+    order_id: ord.order_id,
+    order_ref: ord.order_ref,
+    user_name: ord.user_name || 'Guest',
+    phone: ord.phone || null,
+    whatsapp_consent: !!ord.whatsapp_consent,
+    itemsText,
+    addonsText,
+    mediaUrl
+  };
+}
+
+async function ensureTicketPdfForOrder(orderId) {
+  const bRes = await pool.query(
+    `SELECT booking_id, ticket_pdf FROM bookings WHERE order_id = $1 ORDER BY booking_id ASC`,
+    [orderId]
+  );
+  const rows = bRes.rows || [];
+  if (!rows.length) return null;
+  const existing = rows.find((r) => r.ticket_pdf)?.ticket_pdf || null;
+  if (existing) return existing;
+
+  const ticketService = require('./ticketService');
+  const urlPath = await ticketService.generateTicket(rows[0].booking_id);
+  if (urlPath) {
+    await pool.query(
+      `UPDATE bookings SET ticket_pdf = $1, updated_at = NOW() WHERE order_id = $2 AND (ticket_pdf IS NULL OR ticket_pdf = '')`,
+      [urlPath, orderId]
+    );
+  }
+  return urlPath || null;
+}
+
+async function sendTicketForOrder(orderId, { skipConsentCheck = false, force = false, instant = false } = {}) {
+  if (!orderId) return { success: false, reason: 'missing-orderId' };
+  if (!INTERAKT_URL || !INTERAKT_KEY) {
+    console.log('Interakt not configured - skipping WhatsApp send');
+    return { success: false, reason: 'not-configured' };
+  }
+
+  const sentRes = await pool.query(
+    `SELECT COUNT(*)::int AS sent_count FROM bookings WHERE order_id = $1 AND whatsapp_sent = true`,
+    [orderId]
+  );
+  const alreadySent = (sentRes.rows[0]?.sent_count || 0) > 0;
+  if (alreadySent && !force) {
+    return { success: false, reason: 'already-sent' };
+  }
+
+  const ensuredTicket = await ensureTicketPdfForOrder(orderId);
+  const data = await buildTicketTemplateDataForOrder(orderId);
+  if (!data) return { success: false, reason: 'order-not-found' };
+
+  if (!skipConsentCheck && !data.whatsapp_consent) {
+    console.log('User has not consented to WhatsApp - skipping send');
+    return { success: false, reason: 'no-consent' };
+  }
+  if (!data.phone) return { success: false, reason: 'no-phone' };
+
+  const phone = normalizePhone(data.phone);
+  if (!phone) return { success: false, reason: 'invalid-phone' };
+
+  const mediaUrl = data.mediaUrl || resolveMediaUrl(ensuredTicket);
+  const fileName = data.order_ref ? `ticket-${data.order_ref}.pdf` : `ticket-order-${orderId}.pdf`;
+
+  const payload = {
+    countryCode: phone.countryCode,
+    phoneNumber: phone.phoneNumber,
+    callbackData: `ticket-order-${orderId}`,
+    type: 'Template',
+    template: {
+      name: 'ticket_confirmation_pdf',
+      languageCode: 'en',
+      ...(mediaUrl ? { headerValues: [mediaUrl], fileName } : {}),
+      bodyValues: [
+        data.user_name || 'Guest',
+        data.itemsText || 'Booking confirmed',
+        data.addonsText || 'None'
+      ]
+    }
+  };
+
+  console.log('Interakt order template send payload:', JSON.stringify(payload, null, 2));
+
+  try {
+    const opts = { headers: { Authorization: `Basic ${INTERAKT_KEY}`, 'Content-Type': 'application/json' }, ...(instant ? {} : { timeout: 60000 }) };
+    const res = instant
+      ? await axiosPostInstant(INTERAKT_URL, payload, opts)
+      : await axiosPostWithRetries(INTERAKT_URL, payload, opts, 3, 1500);
+    await pool.query(`UPDATE bookings SET whatsapp_sent = true, updated_at = NOW() WHERE order_id = $1`, [orderId]);
+    return { success: true, response: res.data };
+  } catch (err) {
+    console.error('Interakt order template send error:', err?.response?.status, err?.response?.data || err?.message || err);
+    return { success: false, reason: err?.response?.status || err?.message || 'request-failed' };
+  }
 }
 
 async function axiosPostWithRetries(url, payload, options = {}, retries = 3, backoffMs = 1000) {
@@ -95,259 +337,19 @@ async function sendWhatsApp({ to, text, mediaUrl } = {}) {
 
 async function sendTicketForBooking(bookingId, skipConsentCheck = false) {
   if (!bookingId) return { success: false, reason: 'missing-bookingId' };
-
-  // Fetch booking with slot start from slots if available
-  const comboTitleExpr = `COALESCE(NULLIF(CONCAT_WS(' + ', NULLIF(a1.title, ''), NULLIF(a2.title, '')), ''), CONCAT('Combo #', c.combo_id::text))`;
-  const itemTitleExpr = `CASE WHEN b.item_type = 'Combo' THEN ${comboTitleExpr} ELSE a.title END`;
-
-  const bRes = await pool.query(`
-    SELECT
-      b.*,
-      u.name AS user_name, u.phone, u.email, u.whatsapp_consent,
-      ${itemTitleExpr} AS item_title,
-      COALESCE(s.start_time, cs.start_time, b.slot_start_time) AS slot_start_time,
-      b.created_at AS booking_date,
-      COALESCE(
-        STRING_AGG(
-          CONCAT(ad.title, ' (', ba.quantity, 'x)'),
-          ', '
-        ),
-        'None'
-      ) AS addons_details
-    FROM bookings b
-    LEFT JOIN users u ON u.user_id = b.user_id
-    LEFT JOIN attractions a ON a.attraction_id = b.attraction_id
-    LEFT JOIN combos c ON c.combo_id = b.combo_id
-    LEFT JOIN attractions a1 ON a1.attraction_id = c.attraction_1_id
-    LEFT JOIN attractions a2 ON a2.attraction_id = c.combo_id
-    LEFT JOIN attraction_slots s ON s.slot_id = b.slot_id
-    LEFT JOIN combo_slots cs ON cs.combo_slot_id = b.combo_slot_id
-    LEFT JOIN booking_addons ba ON ba.booking_id = b.booking_id
-    LEFT JOIN addons ad ON ad.addon_id = ba.addon_id
-    WHERE b.booking_id = $1
-    GROUP BY b.booking_id, u.user_id, u.name, u.phone, u.email, u.whatsapp_consent,
-             a.attraction_id, a.title, c.combo_id, a1.attraction_id, a1.title,
-             a2.attraction_id, a2.title, s.slot_id, s.start_time, cs.combo_slot_id, cs.start_time
-  `, [bookingId]);
-
-  const bRow = bRes.rows[0];
-  if (!bRow) return { success: false, reason: 'booking-not-found' };
-
-  console.log('DEBUG booking row:', {
-    booking_id: bRow.booking_id,
-    user_name: bRow.user_name,
-    item_title: bRow.item_title,
-    slot_start_time: bRow.slot_start_time,
-    phone: bRow.phone,
-    ticket_pdf: bRow.ticket_pdf
-  });
-
-  if (!skipConsentCheck && !bRow.whatsapp_consent) {
-    console.log('User has not consented to WhatsApp - skipping send');
-    return { success: false, reason: 'no-consent' };
-  }
-
-  if (!bRow.phone) return { success: false, reason: 'no-phone' };
-  const ticketPath = bRow.ticket_pdf || null;
-  // Use production HTTPS URL for WhatsApp - convert localhost URLs to HTTPS
-  const productionPdfUrl = 'https://snowcity-backend-zjlj.onrender.com/uploads/tickets/2025/12/16/ORDER_ORD202512162fc678.pdf';
-  let mediaUrl;
-  if (ticketPath) {
-    if (ticketPath.startsWith('https://snowcity-backend-zjlj.onrender.com')) {
-      // Replace any localhost URL with the specific default PDF URL
-      mediaUrl = 'https://snowcity-backend-zjlj.onrender.com/uploads/tickets/2025/12/16/ORDER_ORD202512162fc678.pdf';
-    } else if (!ticketPath.startsWith('http')) {
-      // Relative path - use production base URL
-      mediaUrl = `https://snowcity-backend-zjlj.onrender.com${ticketPath}`;
-    } else {
-      // Already absolute URL - use as is
-      mediaUrl = ticketPath;
-    }
-  } else {
-    mediaUrl = productionPdfUrl;
-  }
-
-  // Build slotDateTime: try to combine booking_date + slot_start_time when slot_start_time is a time string
-  let slotDateTime = 'TBD';
-  try {
-    if (bRow.slot_start_time) {
-      // slot_start_time might be TIME like '10:00:00' or a full datetime
-      if (/^\d{2}:\d{2}:?\d{0,2}$/.test(String(bRow.slot_start_time))) {
-        const bookingDate = new Date(bRow.booking_date || Date.now());
-        const [hh, mm, ss] = String(bRow.slot_start_time).split(':').map((v) => Number(v || 0));
-        bookingDate.setHours(hh || 0, mm || 0, ss || 0, 0);
-        slotDateTime = bookingDate.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', year: 'numeric', month: 'short', day: 'numeric' }) +
-          ' at ' + bookingDate.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
-      } else {
-        // assume it's a full datetime
-        const d = new Date(bRow.slot_start_time);
-        slotDateTime = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', year: 'numeric', month: 'short', day: 'numeric' }) +
-          ' at ' + d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
-      }
-    }
-  } catch (e) {
-    console.warn('Failed to compute slotDateTime:', e);
-    slotDateTime = 'TBD';
-  }
-
-  const phone = normalizePhone(bRow.phone);
-  if (!phone) return { success: false, reason: 'invalid-phone' };
-
-  const payload = {
-    countryCode: phone.countryCode,
-    phoneNumber: phone.phoneNumber,
-    callbackData: `ticket-${bRow.booking_id}`,
-    type: 'Template',
-    template: {
-      name: 'ticket_confirmation_pdf',
-      languageCode: 'en',
-      headerValues: [mediaUrl],
-      fileName: `ticket-${bRow.booking_id}.pdf`,
-      bodyValues: [
-        bRow.user_name || 'Guest',
-        `${bRow.item_title || 'Activity'} on ${slotDateTime}`,
-        bRow.addons_details || 'None'
-      ]
-    }
-  };
-
-  console.log('Interakt template send payload:', JSON.stringify(payload, null, 2));
-
-  try {
-    const opts = { headers: { Authorization: `Basic ${INTERAKT_KEY}`, 'Content-Type': 'application/json' }, timeout: 60000 };
-    const res = await axiosPostWithRetries(INTERAKT_URL, payload, opts, 3, 1500);
-    console.log('Interakt ticket sent successfully:', res.data);
-    return { success: true, response: res.data };
-  } catch (err) {
-    console.error('Interakt template send error:', err?.response?.status, err?.response?.data || err?.message || err);
-    return { success: false, reason: err?.response?.status || err?.message || 'request-failed' };
-  }
+  const oRes = await pool.query(`SELECT order_id FROM bookings WHERE booking_id = $1`, [bookingId]);
+  const orderId = oRes.rows[0]?.order_id || null;
+  if (!orderId) return { success: false, reason: 'order-not-found' };
+  return sendTicketForOrder(orderId, { skipConsentCheck, force: false, instant: false });
 }
 
 // Instant send function for admin resend operations - no retries, shorter timeout
 async function sendTicketForBookingInstant(bookingId, skipConsentCheck = false) {
-  if (!INTERAKT_URL || !INTERAKT_KEY) {
-    console.log('Interakt not configured - skipping instant WhatsApp send');
-    return { success: false, reason: 'not-configured' };
-  }
-
-  const bRes = await pool.query(`
-    SELECT b.booking_id, u.name AS user_name, u.phone, b.ticket_pdf, b.booking_date, u.whatsapp_consent,
-           COALESCE(a.title, CONCAT('Combo #', c.combo_id::text)) as item_title,
-             COALESCE(ab.start_time, cb.start_time) as slot_start_time,
-           COALESCE(
-             STRING_AGG(
-               CONCAT(ad.title, ' (', ba.quantity, 'x)'),
-               ', '
-             ),
-             'None'
-           ) AS addons_details
-    FROM bookings b
-    LEFT JOIN users u ON u.user_id = b.user_id
-    LEFT JOIN attractions a ON a.attraction_id = b.attraction_id
-    LEFT JOIN combos c ON c.combo_id = b.combo_id
-    LEFT JOIN attraction_slots ab ON ab.slot_id = b.slot_id
-    LEFT JOIN combo_slots cb ON cb.combo_slot_id = b.combo_slot_id
-    LEFT JOIN booking_addons ba ON ba.booking_id = b.booking_id
-    LEFT JOIN addons ad ON ad.addon_id = ba.addon_id
-    WHERE b.booking_id = $1
-    GROUP BY b.booking_id, u.user_id, u.name, u.phone, b.ticket_pdf, b.booking_date, u.whatsapp_consent,
-             a.attraction_id, a.title, c.combo_id, ab.slot_id, ab.start_time,
-             cb.combo_slot_id, cb.start_time
-  `, [bookingId]);
-
-  const bRow = bRes.rows[0];
-  if (!bRow) return { success: false, reason: 'booking-not-found' };
-
-  console.log('DEBUG instant booking row:', {
-    booking_id: bRow.booking_id,
-    user_name: bRow.user_name,
-    item_title: bRow.item_title,
-    slot_start_time: bRow.slot_start_time,
-    phone: bRow.phone,
-    ticket_pdf: bRow.ticket_pdf
-  });
-
-  if (!skipConsentCheck && !bRow.whatsapp_consent) {
-    console.log('User has not consented to WhatsApp - skipping instant send');
-    return { success: false, reason: 'no-consent' };
-  }
-
-  if (!bRow.phone) return { success: false, reason: 'no-phone' };
-  const ticketPath = bRow.ticket_pdf || null;
-  // Use production HTTPS URL for WhatsApp - convert localhost URLs to HTTPS
-  const productionPdfUrl = 'https://snowcity-backend-zjlj.onrender.com/uploads/tickets/2025/12/16/ORDER_ORD202512162fc678.pdf';
-  let mediaUrl;
-  if (ticketPath) {
-    if (ticketPath.startsWith('https://snowcity-backend-zjlj.onrender.com')) {
-      // Replace any localhost URL with the specific default PDF URL
-      mediaUrl = 'https://snowcity-backend-zjlj.onrender.com/uploads/tickets/2025/12/16/ORDER_ORD202512162fc678.pdf';
-    } else if (!ticketPath.startsWith('http')) {
-      // Relative path - use production base URL
-      mediaUrl = `https://snowcity-backend-zjlj.onrender.com${ticketPath}`;
-    } else {
-      // Already absolute URL - use as is
-      mediaUrl = ticketPath;
-    }
-  } else {
-    mediaUrl = productionPdfUrl;
-  }
-
-  // Build slotDateTime: try to combine booking_date + slot_start_time when slot_start_time is a time string
-  let slotDateTime = 'TBD';
-  try {
-    if (bRow.slot_start_time) {
-      // slot_start_time might be TIME like '10:00:00' or a full datetime
-      if (/^\d{2}:\d{2}:?\d{0,2}$/.test(String(bRow.slot_start_time))) {
-        const bookingDate = new Date(bRow.booking_date || Date.now());
-        const [hh, mm, ss] = String(bRow.slot_start_time).split(':').map((v) => Number(v || 0));
-        bookingDate.setHours(hh || 0, mm || 0, ss || 0, 0);
-        slotDateTime = bookingDate.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', year: 'numeric', month: 'short', day: 'numeric' }) +
-          ' at ' + bookingDate.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
-      } else {
-        // assume it's a full datetime
-        const d = new Date(bRow.slot_start_time);
-        slotDateTime = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', year: 'numeric', month: 'short', day: 'numeric' }) +
-          ' at ' + d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
-      }
-    }
-  } catch (e) {
-    console.warn('Failed to compute slotDateTime:', e);
-    slotDateTime = 'TBD';
-  }
-
-  const phone = normalizePhone(bRow.phone);
-  if (!phone) return { success: false, reason: 'invalid-phone' };
-
-  const payload = {
-    countryCode: phone.countryCode,
-    phoneNumber: phone.phoneNumber,
-    callbackData: `ticket-${bRow.booking_id}`,
-    type: 'Template',
-    template: {
-      name: 'ticket_confirmation_pdf',
-      languageCode: 'en',
-      headerValues: [mediaUrl],
-      fileName: `ticket-${bRow.booking_id}.pdf`,
-      bodyValues: [
-        bRow.user_name || 'Guest',
-        `${bRow.item_title || 'Activity'} on ${slotDateTime}`,
-        bRow.addons_details || 'None'
-      ]
-    }
-  };
-
-  console.log('Interakt instant template send payload:', JSON.stringify(payload, null, 2));
-
-  try {
-    const opts = { headers: { Authorization: `Basic ${INTERAKT_KEY}`, 'Content-Type': 'application/json' } };
-    const res = await axiosPostInstant(INTERAKT_URL, payload, opts);
-    console.log('Interakt instant ticket sent successfully:', res.data);
-    return { success: true, response: res.data };
-  } catch (err) {
-    console.error('Interakt instant template send error:', err?.response?.status, err?.response?.data || err?.message || err);
-    return { success: false, reason: err?.response?.status || err?.message || 'request-failed' };
-  }
+  if (!bookingId) return { success: false, reason: 'missing-bookingId' };
+  const oRes = await pool.query(`SELECT order_id FROM bookings WHERE booking_id = $1`, [bookingId]);
+  const orderId = oRes.rows[0]?.order_id || null;
+  if (!orderId) return { success: false, reason: 'order-not-found' };
+  return sendTicketForOrder(orderId, { skipConsentCheck, force: true, instant: true });
 }
 
 async function addContact({ phone, name, email, userId }) {
@@ -398,4 +400,11 @@ async function addContact({ phone, name, email, userId }) {
   }
 }
 
-module.exports = { sendWhatsApp, sendTicketForBooking, sendTicketForBookingInstant, addContact };
+module.exports = {
+  sendWhatsApp,
+  sendTicketForOrder,
+  buildTicketTemplateDataForOrder,
+  sendTicketForBooking,
+  sendTicketForBookingInstant,
+  addContact
+};
