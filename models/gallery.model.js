@@ -99,7 +99,7 @@ async function list({ active = null, q = '', target_type = null, target_ref_id =
       END AS target_name
      FROM gallery_items gi
      ${whereSql.replace(/gallery_items/g, 'gi')}
-     ORDER BY gi.created_at DESC LIMIT $${i} OFFSET $${i + 1}`,
+     ORDER BY gi.created_at ASC LIMIT $${i} OFFSET $${i + 1}`,
     [...params, limit, offset]
   );
   return rows.map(map);

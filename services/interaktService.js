@@ -239,7 +239,7 @@ async function sendTicketForOrder(orderId, { skipConsentCheck = false, force = f
     callbackData: `ticket-order-${orderId}`,
     type: 'Template',
     template: {
-      name: 'ticket_confirmation_pdf',
+      name: 'ticket_confirmation_pdf_js',
       languageCode: 'en',
       ...(mediaUrl ? { headerValues: [mediaUrl], fileName } : {}),
       bodyValues: [

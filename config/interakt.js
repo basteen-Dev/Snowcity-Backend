@@ -40,7 +40,7 @@ async function sendWhatsApp({ to, body, mediaUrl = null, fileName = null }) {
     phoneNumber,
     type: "Template",
     template: {
-      name: "ticket_confirmation", // Template name to be configured in Interakt
+      name: "ticket_confirmation_pdf_js", // Template name to be configured in Interakt
       languageCode: "en",
       bodyValues: [
         body // Message body as first parameter
