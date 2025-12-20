@@ -714,15 +714,7 @@ async function checkPayPhiStatus(orderId) {
             const urlPath = await ticketService.generateTicket(row.booking_id);
             await pool.query(`UPDATE bookings SET ticket_pdf = $1 WHERE booking_id = $2`, [urlPath, row.booking_id]);
             
-            // Send WhatsApp ticket
-            try {
-                const whatsappSent = await interaktService.sendTicketForBooking(row.booking_id);
-                if (whatsappSent && whatsappSent.success) {
-                    await pool.query(`UPDATE bookings SET whatsapp_sent = true WHERE booking_id = $1`, [row.booking_id]);
-                }
-            } catch (whatsappErr) {
-                console.error(`WhatsApp ticket workflow failed for booking ${row.booking_id}`, whatsappErr);
-            }
+            // WhatsApp ticket will be sent by the order-level function to avoid duplicates
         } catch (err) {
             console.error(`Ticket workflow failed for booking ${row.booking_id}`, err);
         }
@@ -733,6 +725,13 @@ async function checkPayPhiStatus(orderId) {
         await ticketEmailService.sendOrderEmail(order.order_id);
     } catch (err) {
         console.error('Failed to send order email', err);
+    }
+
+    // Send WhatsApp ticket for the entire order (prevents duplicates)
+    try {
+        await interaktService.sendTicketForOrder(order.order_id);
+    } catch (err) {
+        console.error('Failed to send WhatsApp ticket for order', err);
     }
  
   }

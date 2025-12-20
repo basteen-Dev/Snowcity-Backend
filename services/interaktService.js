@@ -145,7 +145,7 @@ async function buildTicketTemplateDataForOrder(orderId) {
     attractionLines.push(`${date}: ${attractionDetails}`);
   });
   
-  const itemsText = attractionLines.length ? attractionLines.join('\n') : 'Booking details unavailable';
+  const itemsText = attractionLines.length ? attractionLines.join(' | ') : 'Booking details unavailable';
 
   const addonMap = new Map();
   effectiveItems.forEach((it) => {
@@ -163,7 +163,7 @@ async function buildTicketTemplateDataForOrder(orderId) {
     .filter((x) => x.qty > 0)
     .sort((a, b) => String(a.name).localeCompare(String(b.name)))
     .map((x) => `${x.name} (${x.qty}x)`);
-  const addonsText = addonLines.length ? addonLines.join('\n') : 'None';
+  const addonsText = addonLines.length ? addonLines.join(', ') : 'None';
 
   const firstTicket = (items.find((x) => x.ticket_pdf) || {}).ticket_pdf || null;
   const mediaUrl = resolveMediaUrl(firstTicket);
