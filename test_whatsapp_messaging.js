@@ -79,7 +79,7 @@ require = function(id) {
   }
   if (id === '../config/messaging') {
     return {
-      APP_URL: 'http://localhost:4000',
+      APP_URL: 'https://snowcity-backend-zjlj.onrender.com',
       interakt: {
         apiUrl: 'https://api.interakt.ai/v1/public/message/',
         apiKey: 'test-key',
