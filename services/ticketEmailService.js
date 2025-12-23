@@ -51,7 +51,7 @@ function formatMoney(n) {
 }
 
 function buildItemsHtml(items = []) {
-  if (!items.length) return '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #666;">No items found</td></tr>';
+  if (!items.length) return '<div class="no-items" style="text-align:center;color:#666;padding:12px;">No items found</div>';
 
   // Helper function to format time to 12-hour format
   function formatTime12Hour(time24) {
@@ -113,17 +113,14 @@ function buildItemsHtml(items = []) {
       : '-';
 
     return `
-      <tr>
-        <td style="padding:15px 12px;border-bottom:1px solid #E3F2FD;">
+      <div class="item-card">
+        <div class="item-meta">
           <div class="item-title">${title}</div>
           <div class="item-details">Booking ID: ${item.booking_id || item.booking_ref || '-'}</div>
-        </td>
-        <td style="padding:15px 12px;border-bottom:1px solid #E3F2FD;">${bookingDate}</td>
-        <td style="padding:15px 12px;border-bottom:1px solid #E3F2FD;">${slotTime}</td>
-        <td style="padding:15px 12px;border-bottom:1px solid #E3F2FD;">${quantity}</td>
-        <td style="padding:15px 12px;border-bottom:1px solid #E3F2FD;">${addonsText}</td>
-        <td style="padding:15px 12px;border-bottom:1px solid #E3F2FD;font-weight:600;color:#0B4DA2;">${formatMoney(item.final_amount || item.total_amount)}</td>
-      </tr>`;
+          <div class="item-subinfo">${bookingDate} • ${slotTime} • Pax: ${quantity} • ${addonsText}</div>
+        </div>
+        <div class="item-amount">${formatMoney(item.final_amount || item.total_amount)}</div>
+      </div>`;
   }).join('');
 
   return rows;

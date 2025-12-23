@@ -1,0 +1,151 @@
+const { pool } = require('../config/db');
+
+function mapDynamicPricingRule(row) {
+  if (!row) return null;
+
+  return {
+    rule_id: row.rule_id,
+    name: row.name,
+    description: row.description,
+    target_type: row.target_type,
+    target_id: row.target_id,
+    date_ranges: row.date_ranges || [],
+    price_adjustment_type: row.price_adjustment_type,
+    price_adjustment_value: Number(row.price_adjustment_value),
+    active: Boolean(row.active),
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+async function createRule({
+  name,
+  description,
+  target_type,
+  target_id,
+  date_ranges,
+  price_adjustment_type,
+  price_adjustment_value,
+  active = true,
+}) {
+  const { rows } = await pool.query(
+    `INSERT INTO dynamic_pricing_rules
+     (name, description, target_type, target_id, date_ranges, price_adjustment_type, price_adjustment_value, active)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     RETURNING *`,
+    [name, description, target_type, target_id, JSON.stringify(date_ranges), price_adjustment_type, price_adjustment_value, active]
+  );
+  return mapDynamicPricingRule(rows[0]);
+}
+
+async function getRules({ target_type, target_id, date, active = true } = {}) {
+  const where = [];
+  const params = [];
+  let paramIndex = 1;
+
+  if (target_type) {
+    where.push(`target_type = $${paramIndex}`);
+    params.push(target_type);
+    paramIndex++;
+  }
+
+  if (target_id !== undefined) {
+    where.push(`target_id = $${paramIndex}`);
+    params.push(target_id);
+    paramIndex++;
+  }
+
+  if (date) {
+    // Check if any date range contains the given date
+    where.push(`EXISTS (SELECT 1 FROM jsonb_array_elements(date_ranges) AS range WHERE (range->>'from')::date <= $${paramIndex}::date AND (range->>'to')::date >= $${paramIndex}::date)`);
+    params.push(date);
+    paramIndex++;
+  }
+
+  if (active !== undefined) {
+    where.push(`active = $${paramIndex}`);
+    params.push(active);
+    paramIndex++;
+  }
+
+  const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+  const { rows } = await pool.query(
+    `SELECT * FROM dynamic_pricing_rules ${whereClause} ORDER BY created_at DESC`,
+    params
+  );
+
+  return rows.map(mapDynamicPricingRule);
+}
+
+async function getRuleById(rule_id) {
+  const { rows } = await pool.query(
+    'SELECT * FROM dynamic_pricing_rules WHERE rule_id = $1',
+    [rule_id]
+  );
+  return mapDynamicPricingRule(rows[0]);
+}
+
+async function updateRule(rule_id, updates) {
+  const fields = [];
+  const params = [];
+  let paramIndex = 1;
+
+  Object.keys(updates).forEach(key => {
+    if (updates[key] !== undefined) {
+      fields.push(`${key} = $${paramIndex}`);
+      // Stringify date_ranges if it's an array
+      const value = key === 'date_ranges' && Array.isArray(updates[key]) ? JSON.stringify(updates[key]) : updates[key];
+      params.push(value);
+      paramIndex++;
+    }
+  });
+
+  if (fields.length === 0) return null;
+
+  params.push(rule_id);
+
+  const { rows } = await pool.query(
+    `UPDATE dynamic_pricing_rules SET ${fields.join(', ')} WHERE rule_id = $${paramIndex} RETURNING *`,
+    params
+  );
+
+  return mapDynamicPricingRule(rows[0]);
+}
+
+async function deleteRule(rule_id) {
+  const { rows } = await pool.query(
+    'DELETE FROM dynamic_pricing_rules WHERE rule_id = $1 RETURNING *',
+    [rule_id]
+  );
+  return mapDynamicPricingRule(rows[0]);
+}
+
+async function getApplicableRules(targetType, targetId, bookingDate) {
+  // Get rules that apply to this specific target
+  const specificRules = await getRules({
+    target_type: targetType,
+    target_id: targetId,
+    date: bookingDate,
+    active: true,
+  });
+
+  // Get rules that apply to all targets of this type
+  const allRules = await getRules({
+    target_type: 'all',
+    date: bookingDate,
+    active: true,
+  });
+
+  return [...specificRules, ...allRules];
+}
+
+module.exports = {
+  createRule,
+  getRules,
+  getRuleById,
+  updateRule,
+  deleteRule,
+  getApplicableRules,
+  mapDynamicPricingRule,
+};

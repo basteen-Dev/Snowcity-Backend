@@ -1,5 +1,6 @@
 const { pool } = require('../config/db');
 const ComboSlotAutoService = require('../services/comboSlotAutoService');
+const { slugify } = require('../utils/slugify');
 
 // Helper function to map combo data
 function mapCombo(row) {
@@ -8,6 +9,7 @@ function mapCombo(row) {
   return {
     combo_id: row.combo_id,
     name: row.name,
+    slug: row.slug,
     attraction_ids: row.attraction_ids || [],
     attraction_prices: row.attraction_prices || {},
     total_price: Number(row.total_price) || 0,
@@ -29,6 +31,7 @@ function mapCombo(row) {
 
 async function createCombo({ 
   name, 
+  slug,
   attraction_ids, 
   attraction_prices, 
   total_price, 
@@ -41,12 +44,15 @@ async function createCombo({
   try {
     await client.query('BEGIN');
     
+    // Generate slug if not provided
+    const finalSlug = slug || slugify(name);
+    
     // Insert combo
     const { rows } = await client.query(
-      `INSERT INTO combos (name, attraction_ids, attraction_prices, total_price, image_url, desktop_image_url, discount_percent, active, create_slots)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
+      `INSERT INTO combos (name, slug, attraction_ids, attraction_prices, total_price, image_url, desktop_image_url, discount_percent, active, create_slots)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true)
        RETURNING *`,
-      [name, attraction_ids, attraction_prices, total_price, image_url, desktop_image_url, discount_percent, active]
+      [name, finalSlug, attraction_ids, attraction_prices, total_price, image_url, desktop_image_url, discount_percent, active]
     );
     
     const combo = mapCombo(rows[0]);
@@ -90,6 +96,16 @@ async function getComboById(combo_id) {
      FROM combo_details cd
      WHERE cd.combo_id = $1`,
     [combo_id]
+  );
+  return mapCombo(rows[0]);
+}
+
+async function getComboBySlug(slug) {
+  const { rows } = await pool.query(
+    `SELECT cd.*
+     FROM combo_details cd
+     WHERE cd.slug = $1`,
+    [slug]
   );
   return mapCombo(rows[0]);
 }
@@ -182,6 +198,7 @@ async function deleteCombo(combo_id) {
 module.exports = {
   createCombo,
   getComboById,
+  getComboBySlug,
   listCombos,
   updateCombo,
   deleteCombo,

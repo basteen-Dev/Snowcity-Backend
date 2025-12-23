@@ -5,6 +5,7 @@ const slotsCtrl = require('../user/controllers/slots.controller');
 // Public attractions
 router.get('/', attractionsCtrl.listAttractions);
 router.get('/:id', attractionsCtrl.getAttractionById);
+router.get('/slug/:slug', attractionsCtrl.getAttractionBySlug);
 
 // Convenience: slots for an attraction
 router.get('/:id/slots', async (req, res, next) => {

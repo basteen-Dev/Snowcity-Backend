@@ -90,6 +90,17 @@ exports.getComboById = async (req, res, next) => {
   }
 };
 
+// GET /api/combos/slug/:slug
+exports.getComboBySlug = async (req, res, next) => {
+  try {
+    const slug = req.params.slug;
+    const row = await comboService.getBySlug(slug);
+    res.json(row);
+  } catch (err) {
+    next(err);
+  }
+};
+
 // GET /api/combos/:id/slots?date=YYYY-MM-DD
 exports.getComboSlots = async (req, res, next) => {
   try {

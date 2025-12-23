@@ -45,6 +45,16 @@ async function getById(id) {
   return withPricing({ ...row });
 }
 
+async function getBySlug(slug) {
+  const row = await attractionsModel.getAttractionBySlug(slug);
+  if (!row) {
+    const err = new Error('Attraction not found');
+    err.status = 404;
+    throw err;
+  }
+  return withPricing({ ...row });
+}
+
 async function create(payload) {
   return attractionsModel.createAttraction(payload);
 }
@@ -72,6 +82,7 @@ async function remove(id) {
 module.exports = {
   list,
   getById,
+  getBySlug,
   create,
   update,
   remove,

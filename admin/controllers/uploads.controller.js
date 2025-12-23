@@ -56,3 +56,58 @@ exports.uploadSingleImage = async (req, res, next) => {
     return next(error);
   }
 };
+
+exports.uploadBulkImages = async (req, res, next) => {
+  try {
+    if (!req.files || !req.files.length) {
+      return res.status(400).json({ error: 'No files provided' });
+    }
+
+    const folder = req.body?.folder || '';
+    const optimize = parseBoolean(req.body?.optimize, true);
+
+    logger.debug('Admin bulk upload incoming', {
+      count: req.files.length,
+      folder,
+      optimize,
+    });
+
+    const results = [];
+    for (const file of req.files) {
+      try {
+        const result = await saveToLocal(file, { folder, optimize });
+        const media = await mediaModel.createMedia({
+          url_path: result.urlPath,
+          relative_path: result.relativePath,
+          filename: result.filename,
+          size: result.size,
+          mimetype: result.mimetype,
+          folder: result.folder,
+        });
+        results.push({
+          media_id: media?.media_id,
+          url: result.urlPath,
+          path: result.relativePath,
+          filename: result.filename,
+          size: result.size,
+          mimetype: result.mimetype,
+          folder: result.folder,
+        });
+      } catch (fileError) {
+        logger.error('Failed to upload file', { filename: file.originalname, error: fileError.message });
+        // Continue with other files
+      }
+    }
+
+    return res.status(201).json({
+      urls: results.map(r => r.url),
+      files: results,
+    });
+  } catch (error) {
+    logger.error('Failed to handle admin bulk upload', {
+      message: error.message,
+      stack: error.stack,
+    });
+    return next(error);
+  }
+};

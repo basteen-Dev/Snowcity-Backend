@@ -57,6 +57,11 @@ async function getAttractionById(attraction_id) {
   return rows[0] || null;
 }
 
+async function getAttractionBySlug(slug) {
+  const { rows } = await pool.query(`SELECT * FROM attractions WHERE slug = $1`, [slug]);
+  return rows[0] || null;
+}
+
 async function listAttractions({ search = '', active = null, limit = 50, offset = 0, attractionIds = null } = {}) {
   const where = [];
   const params = [];
@@ -128,6 +133,7 @@ async function setActive(attraction_id, active) {
 module.exports = {
   createAttraction,
   getAttractionById,
+  getAttractionBySlug,
   listAttractions,
   updateAttraction,
   deleteAttraction,

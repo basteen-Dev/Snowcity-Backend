@@ -1,6 +1,6 @@
 const slotService = require('../../services/slotService');
 const attractionsService = require('../../services/attractionService');
-const { applyOfferPricing } = require('../../services/offerPricing');
+const dynamicPricingService = require('../../services/dynamicPricingService');
 
 const toNumber = (value, fallback = 0) => {
   const num = Number(value);
@@ -29,29 +29,32 @@ const enrichSlotWithPricing = async (slot, attraction) => {
     return { ...slot, base_price: basePrice || 0, price: basePrice || 0 };
   }
 
-  const offerPricing = await applyOfferPricing({
-    targetType: 'attraction',
-    targetId: attraction.attraction_id || attraction.id,
-    slotType: 'attraction',
-    slotId: normalizeSlotId(slot),
-    baseAmount: basePrice,
-    booking_date: slot.start_date || slot.date || null,
-    booking_time: slot.start_time || null,
+  // Parse date and time for pricing calculation
+  const bookingDate = slot.start_date || slot.date ? new Date(slot.start_date || slot.date) : new Date();
+  const bookingTime = slot.start_time || '12:00:00'; // Default to noon if no time
+
+  const pricingResult = await dynamicPricingService.calculateDynamicPrice({
+    itemType: 'attraction',
+    itemId: attraction.attraction_id || attraction.id,
+    basePrice: basePrice,
+    date: bookingDate,
+    time: bookingTime,
+    quantity: 1,
   });
 
   return {
     ...slot,
     base_price: basePrice,
-    price: offerPricing.unit,
-    offer: offerPricing.offer,
-    offer_discount: offerPricing.discount,
-    offer_discount_percent: offerPricing.discount_percent,
+    price: pricingResult.finalPrice,
+    original_price: pricingResult.originalPrice,
+    discount_amount: pricingResult.discountAmount,
+    applied_rules: pricingResult.appliedRules,
     pricing: {
       base_price: basePrice,
-      final_price: offerPricing.unit,
-      discount_amount: offerPricing.discount,
-      discount_percent: offerPricing.discount_percent,
-      offer: offerPricing.offer,
+      final_price: pricingResult.finalPrice,
+      original_price: pricingResult.originalPrice,
+      discount_amount: pricingResult.discountAmount,
+      applied_rules: pricingResult.appliedRules,
     },
   };
 };

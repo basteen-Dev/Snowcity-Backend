@@ -5,6 +5,7 @@ CREATE OR REPLACE VIEW combo_details AS
 SELECT 
     c.combo_id,
     c.name,
+    c.slug,
     c.attraction_ids,
     c.attraction_prices,
     c.total_price,
@@ -35,7 +36,7 @@ SELECT
 FROM combos c
 LEFT JOIN combo_attractions ca ON c.combo_id = ca.combo_id
 LEFT JOIN attractions a ON ca.attraction_id = a.attraction_id
-GROUP BY c.combo_id, c.name, c.attraction_ids, c.attraction_prices, c.total_price, 
+GROUP BY c.combo_id, c.name, c.slug, c.attraction_ids, c.attraction_prices, c.total_price, 
          c.image_url, c.discount_percent, c.active, c.create_slots, c.created_at, c.updated_at,
          c.attraction_1_id, c.attraction_2_id, c.combo_price;
 

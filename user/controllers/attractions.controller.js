@@ -26,3 +26,14 @@ exports.getAttractionById = async (req, res, next) => {
     next(err);
   }
 };
+
+// GET /api/attractions/slug/:slug
+exports.getAttractionBySlug = async (req, res, next) => {
+  try {
+    const slug = req.params.slug;
+    const row = await attractionService.getBySlug(slug);
+    res.json(row);
+  } catch (err) {
+    next(err);
+  }
+};

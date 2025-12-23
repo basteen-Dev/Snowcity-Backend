@@ -1,3 +1,5 @@
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 const { pool } = require('./config/db');
 
 async function runMigration() {
@@ -10,6 +12,7 @@ async function runMigration() {
     // Add missing columns to combos table (idempotent)
     const columns = [
       { name: 'name', sql: 'VARCHAR(200) NOT NULL DEFAULT \'\'', check: true },
+      { name: 'slug', sql: 'VARCHAR(255) UNIQUE', check: true },
       { name: 'attraction_ids', sql: 'BIGINT[] DEFAULT \'{}\'', check: true },
       { name: 'attraction_prices', sql: 'JSONB DEFAULT \'{}\'::jsonb', check: true },
       { name: 'total_price', sql: 'NUMERIC(10,2) DEFAULT 0 CHECK (total_price >= 0)', check: true },
@@ -85,6 +88,7 @@ async function runMigration() {
       SELECT 
         c.combo_id,
         c.name,
+        c.slug,
         c.attraction_ids,
         c.attraction_prices,
         c.total_price,
@@ -115,7 +119,7 @@ async function runMigration() {
       FROM combos c
       LEFT JOIN combo_attractions ca ON c.combo_id = ca.combo_id
       LEFT JOIN attractions a ON ca.attraction_id = a.attraction_id
-      GROUP BY c.combo_id, c.name, c.attraction_ids, c.attraction_prices, c.total_price, 
+      GROUP BY c.combo_id, c.name, c.slug, c.attraction_ids, c.attraction_prices, c.total_price, 
                c.image_url, c.discount_percent, c.active, c.create_slots, c.created_at, c.updated_at,
                c.attraction_1_id, c.attraction_2_id, c.combo_price
     `);

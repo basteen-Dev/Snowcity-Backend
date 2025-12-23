@@ -30,8 +30,8 @@ const resolveClientBaseUrl = () => {
     .map((val) => String(val || '').trim())
     .filter(Boolean);
   const fallback = process.env.NODE_ENV === 'production'
-    ? 'https://snowpark.netlify.app'
-    : 'https://snowpark.netlify.app';
+    ? 'http://localhost:5173'
+    : 'http://localhost:5173';
   const base = entries[0] || fallback;
   return base.replace(/\/$/, '');
 };
@@ -42,7 +42,7 @@ const resolveAppBaseUrl = () => {
     .split(',')
     .map((val) => String(val || '').trim())
     .filter(Boolean);
-  const fallback = process.env.APP_PUBLIC_URL || 'https://snowcity-backend-zjlj.onrender.com';
+  const fallback = process.env.APP_PUBLIC_URL || 'http://localhost:4000';
   const base = entries[0] || fallback;
   return base.replace(/\/$/, '');
 };

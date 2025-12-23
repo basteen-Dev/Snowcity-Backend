@@ -109,57 +109,57 @@
             border: 1px solid #E3F2FD;
         }
 
-        /* Items Table */
-        .items-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 25px 0;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        /* Items List (table-free, mobile-first) */
+        .items-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 18px 0;
+        }
+
+        .item-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 14px;
+            background: linear-gradient(180deg, #ffffff 0%, #F8FBFF 100%);
+            border-radius: 10px;
             border: 1px solid #E3F2FD;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.04);
         }
 
-        .items-table th {
-            background: linear-gradient(135deg, #1976D2 0%, #42A5F5 100%);
-            color: #ffffff;
-            padding: 16px 12px;
-            text-align: left;
-            font-weight: 700;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border-bottom: 2px solid #1565C0;
-        }
-
-        .items-table td {
-            padding: 16px 12px;
-            border-bottom: 1px solid #E3F2FD;
-            color: #424242;
-            font-size: 14px;
-            vertical-align: top;
-        }
-
-        .items-table tr:nth-child(even) {
-            background-color: #F8FBFF;
-        }
-
-        .items-table tr:hover {
-            background-color: #E3F2FD;
-            transition: background-color 0.2s ease;
+        .item-meta {
+            flex: 1 1 auto;
+            min-width: 0;
         }
 
         .item-title {
             font-weight: 700;
             color: #1976D2;
             font-size: 15px;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
         }
 
         .item-details {
             color: #666666;
             font-size: 13px;
             line-height: 1.4;
+            margin-bottom: 6px;
+        }
+
+        .item-subinfo {
+            color: #4a6b8a;
+            font-size: 13px;
+        }
+
+        .item-amount {
+            flex: 0 0 auto;
+            font-weight: 800;
+            color: #0B4DA2;
+            font-size: 15px;
+            text-align: right;
+            white-space: nowrap;
         }
 
         /* Pricing */
@@ -354,25 +354,8 @@
                 margin: 20px 0;
             }
 
-            .items-table {
-                font-size: 12px;
-                display: block;
-                width: 100%;
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-            }
-
-            .items-table th,
-            .items-table td {
-                padding: 8px 6px;
-                font-size: 12px;
-            }
-
-            .items-table th:nth-child(4),
-            .items-table th:nth-child(5),
-            .items-table td:nth-child(4),
-            .items-table td:nth-child(5) {
-                display: none;
+            .items-list {
+                font-size: 13px;
             }
 
             .price-row {
@@ -505,16 +488,7 @@
                 font-size: 13px;
             }
 
-            .items-table th,
-            .items-table td {
-                padding: 6px 4px;
-                font-size: 11px;
-            }
-
-            .items-table th:nth-child(3),
-            .items-table td:nth-child(3) {
-                display: none;
-            }
+            .items-list .item-card { padding: 10px; }
 
             .cta-button {
                 padding: 12px 20px;
@@ -553,22 +527,10 @@
                 <p class="order-number">Order #{{order_ref}} ({{order_date}})</p>
             </div>
 
-            <!-- Items Table -->
-            <table class="items-table">
-                <thead>
-                    <tr>
-                        <th>Item</th>
-                        <th>Date</th>
-                        <th>Time</th>
-                        <th>Pax</th>
-                        <th>Add-ons</th>
-                        <th>Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {{items_html}}
-                </tbody>
-            </table>
+            <!-- Items List (table-free) -->
+            <div class="items-list">
+                {{items_html}}
+            </div>
 
             <!-- Pricing Section -->
             <div class="pricing-section">
@@ -596,16 +558,6 @@
                     <div>{{billing_phone}}</div>
                     <div>{{billing_email}}</div>
                 </div>
-            </div>
-
-            <!-- Download Button -->
-            <div style="text-align: center; margin: 35px 0;">
-                <a href="{{download_link}}" class="cta-button" style="display: inline-block; background: linear-gradient(135deg, #1976D2 0%, #42A5F5 100%); color: #ffffff; text-decoration: none; padding: 16px 32px; border-radius: 8px; font-weight: 700; text-align: center; box-shadow: 0 6px 20px rgba(25, 118, 210, 0.3); transition: all 0.3s ease; font-size: 16px; text-transform: uppercase; letter-spacing: 0.5px;">
-                    📥 Download Your Ticket (PDF)
-                </a>
-                <p style="color: #666666; font-size: 14px; margin-top: 12px; font-style: italic;">
-                    Keep this ticket safe for entry verification
-                </p>
             </div>
             <div style="margin-top: 35px; padding: 24px; background: linear-gradient(135deg, #F8FBFF 0%, #E3F2FD 100%); border-radius: 12px; border-left: 5px solid #2c84dc; box-shadow: 0 3px 12px rgba(0,0,0,0.08);">
                 <h4 style="color: #2c84dc; margin: 0 0 15px; font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Important Information</h4>

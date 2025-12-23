@@ -1,4 +1,5 @@
 const { pool } = require('../config/db');
+const dynamicPricingModel = require('../models/dynamicPricing.model');
 
 /**
  * Check if a given date is a weekday, weekend, or holiday
@@ -138,6 +139,48 @@ async function getApplicableRules({ itemType, itemId, date, time, holidays = [] 
  * Calculate dynamic price based on applicable rules
  */
 async function calculateDynamicPrice({ itemType, itemId, basePrice, date, time, quantity = 1, holidays = [] }) {
+  // First check if there are dynamic pricing rules for this date
+  const dynamicPricingRules = await dynamicPricingModel.getApplicableRules(itemType, itemId, date.toISOString().split('T')[0]);
+  
+  if (dynamicPricingRules.length > 0) {
+    // Apply dynamic pricing: calculate adjusted price from base price
+    let finalPrice = basePrice;
+    const appliedRules = [];
+    
+    for (const rule of dynamicPricingRules) {
+      let adjustment = 0;
+      
+      if (rule.price_adjustment_type === 'fixed') {
+        adjustment = rule.price_adjustment_value;
+      } else if (rule.price_adjustment_type === 'percentage') {
+        adjustment = (basePrice * rule.price_adjustment_value) / 100;
+      }
+      
+      finalPrice += adjustment;
+      
+      appliedRules.push({
+        ruleId: rule.rule_id,
+        ruleName: rule.name,
+        adjustmentType: rule.price_adjustment_type,
+        adjustmentValue: rule.price_adjustment_value,
+        adjustmentAmount: adjustment,
+        type: 'dynamic_pricing_adjustment'
+      });
+    }
+    
+    // Ensure price doesn't go below 0
+    finalPrice = Math.max(0, finalPrice);
+    
+    return {
+      originalPrice: basePrice,
+      finalPrice,
+      discountAmount: 0, // No discount, just adjustment
+      appliedRules,
+      totalPrice: finalPrice * quantity
+    };
+  }
+  
+  // No dynamic pricing rules, apply normal offers logic
   const rules = await getApplicableRules({ itemType, itemId, date, time, holidays });
   
   if (!rules.length) {
@@ -194,7 +237,7 @@ async function calculateDynamicPrice({ itemType, itemId, basePrice, date, time, 
       break;
     }
   }
-  
+
   return {
     originalPrice: basePrice,
     finalPrice: Math.max(0, finalPrice),
