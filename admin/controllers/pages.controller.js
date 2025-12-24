@@ -157,6 +157,7 @@ exports.createPage = async (req, res, next) => {
 
       // Gallery
       gallery: Array.isArray(p.gallery) ? p.gallery : [],
+      bulk_images: Array.isArray(p.bulk_images) ? p.bulk_images : [],
 
       // Editor mode
       editor_mode: p.editor_mode || 'rich',
@@ -202,6 +203,7 @@ exports.updatePage = async (req, res, next) => {
       section_type: p.section_type,
       section_ref_id: p.section_ref_id,
       gallery: Array.isArray(p.gallery) ? p.gallery : undefined,
+      bulk_images: Array.isArray(p.bulk_images) ? p.bulk_images : undefined,
       editor_mode: p.editor_mode,
       raw_html: p.raw_html,
       raw_css: p.raw_css,
@@ -246,6 +248,7 @@ exports.previewPage = async (req, res, next) => {
       section_type: p.section_type || 'none',
       section_ref_id: p.section_ref_id || null,
       gallery: Array.isArray(p.gallery) ? p.gallery : [],
+      bulk_images: Array.isArray(p.bulk_images) ? p.bulk_images : [],
       active: p.active !== undefined ? !!p.active : true,
       editor_mode: p.editor_mode || 'rich',
       raw_html: p.raw_html || '',

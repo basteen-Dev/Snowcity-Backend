@@ -30,8 +30,8 @@ const resolveClientBaseUrl = () => {
     .map((val) => String(val || '').trim())
     .filter(Boolean);
   const fallback = process.env.NODE_ENV === 'production'
-    ? 'https://snowpark.netlify.app'
-    : 'https://snowpark.netlify.app';
+    ? 'https://snowcity-backend-zjlj.onrender.com'
+    : 'https://snowcity-backend-zjlj.onrender.com';
   const base = entries[0] || fallback;
   return base.replace(/\/$/, '');
 };

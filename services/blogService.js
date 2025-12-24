@@ -29,6 +29,9 @@ async function createBlog(payload = {}) {
   if (Array.isArray(data.gallery)) {
     data.gallery = JSON.stringify(data.gallery);
   }
+  if (Array.isArray(data.bulk_images)) {
+    data.bulk_images = JSON.stringify(data.bulk_images);
+  }
   return blogsModel.createBlog(data);
 }
 
@@ -36,6 +39,9 @@ async function updateBlog(id, payload = {}) {
   const data = { ...payload };
   if (Array.isArray(data.gallery)) {
     data.gallery = JSON.stringify(data.gallery);
+  }
+  if (Array.isArray(data.bulk_images)) {
+    data.bulk_images = JSON.stringify(data.bulk_images);
   }
   return blogsModel.updateBlog(id, data);
 }

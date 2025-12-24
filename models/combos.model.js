@@ -18,6 +18,7 @@ function mapCombo(row) {
     discount_percent: Number(row.discount_percent) || 0,
     active: Boolean(row.active),
     create_slots: Boolean(row.create_slots),
+    meta_title: row.meta_title,
     // Legacy fields for backward compatibility
     attraction_1_id: row.attraction_1_id,
     attraction_2_id: row.attraction_2_id,
@@ -38,7 +39,8 @@ async function createCombo({
   image_url, 
   desktop_image_url = null,
   discount_percent = 0, 
-  active = true 
+  active = true,
+  meta_title = null
 }) {
   const client = await pool.connect();
   try {
@@ -49,10 +51,10 @@ async function createCombo({
     
     // Insert combo
     const { rows } = await client.query(
-      `INSERT INTO combos (name, slug, attraction_ids, attraction_prices, total_price, image_url, desktop_image_url, discount_percent, active, create_slots)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true)
+      `INSERT INTO combos (name, slug, attraction_ids, attraction_prices, total_price, image_url, desktop_image_url, discount_percent, active, create_slots, meta_title)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, $10)
        RETURNING *`,
-      [name, finalSlug, attraction_ids, attraction_prices, total_price, image_url, desktop_image_url, discount_percent, active]
+      [name, finalSlug, attraction_ids, attraction_prices, total_price, image_url, desktop_image_url, discount_percent, active, meta_title]
     );
     
     const combo = mapCombo(rows[0]);

@@ -14,6 +14,20 @@ function normalizeGallery(value) {
   return [];
 }
 
+function normalizeBulkImages(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 function mapPage(row) {
   if (!row) return null;
   return {
@@ -28,6 +42,7 @@ function mapPage(row) {
     section_type: row.section_type,
     section_ref_id: row.section_ref_id,
     gallery: normalizeGallery(row.gallery),
+    bulk_images: normalizeBulkImages(row.bulk_images),
     editor_mode: row.editor_mode || 'rich',
     raw_html: row.raw_html || null,
     raw_css: row.raw_css || null,
@@ -54,6 +69,7 @@ async function createPage({
   section_type = 'none',
   section_ref_id = null,
   gallery = [],
+  bulk_images = [],
   active = true,
   editor_mode = 'rich',
   raw_html = null,
@@ -66,22 +82,23 @@ async function createPage({
 }) {
   const hero = hero_image || image_url || null;
   const galleryPayload = Array.isArray(gallery) ? JSON.stringify(gallery) : gallery;
+  const bulkImagesPayload = Array.isArray(bulk_images) ? JSON.stringify(bulk_images) : bulk_images;
   const navOrder = Number.isFinite(Number(nav_order)) ? Number(nav_order) : 0;
   try {
     const { rows } = await pool.query(
       `INSERT INTO cms_pages (
         title, slug, content, hero_image,
         meta_title, meta_description, meta_keywords,
-        section_type, section_ref_id, gallery, active,
+        section_type, section_ref_id, gallery, bulk_images, active,
         nav_group, nav_order, placement, placement_ref_id,
         editor_mode, raw_html, raw_css, raw_js
       )
        VALUES (
         $1, $2, $3, $4,
         $5, $6, $7,
-        $8, $9, COALESCE($10, '[]'::jsonb), $11,
-        $12, $13, $14, $15,
-        $16, $17, $18, $19
+        $8, $9, COALESCE($10, '[]'::jsonb), COALESCE($11, '[]'::jsonb), $12,
+        $13, $14, $15, $16,
+        $17, $18, $19, $20
       )
        RETURNING *`,
       [
@@ -95,6 +112,7 @@ async function createPage({
         section_type,
         section_ref_id,
         galleryPayload,
+        bulkImagesPayload,
         active,
         nav_group,
         navOrder,
@@ -108,7 +126,7 @@ async function createPage({
     );
     return mapPage(rows[0]);
   } catch (err) {
-    const missingColumn = err && (err.code === '42703' || /column\s+"?(hero_image|nav_group|nav_order|placement|placement_ref_id|editor_mode|raw_html|raw_css|raw_js)"?\s+does not exist/i.test(String(err.message)));
+    const missingColumn = err && (err.code === '42703' || /column\s+"?(hero_image|nav_group|nav_order|placement|placement_ref_id|editor_mode|raw_html|raw_css|raw_js|bulk_images)"?\s+does not exist/i.test(String(err.message)));
     if (missingColumn) {
       const { rows } = await pool.query(
         `INSERT INTO cms_pages (
@@ -189,7 +207,7 @@ async function updatePage(page_id, fields = {}) {
   // Whitelist allowed columns to avoid "column does not exist" errors
   const allowed = new Set([
     'title', 'slug', 'content', 'meta_title', 'meta_description', 'meta_keywords',
-    'section_type', 'section_ref_id', 'gallery', 'active', 'hero_image',
+    'section_type', 'section_ref_id', 'gallery', 'bulk_images', 'active', 'hero_image',
     'nav_group', 'nav_order', 'placement', 'placement_ref_id',
     'editor_mode', 'raw_html', 'raw_css', 'raw_js'
   ]);
@@ -201,7 +219,7 @@ async function updatePage(page_id, fields = {}) {
   const params = [];
   entries.forEach(([k, v]) => {
     let val = v;
-    if (k === 'gallery' && Array.isArray(val)) {
+    if ((k === 'gallery' || k === 'bulk_images') && Array.isArray(val)) {
       val = JSON.stringify(val);
     }
     sets.push(`${k} = $${params.length + 1}`);
@@ -219,8 +237,8 @@ async function updatePage(page_id, fields = {}) {
     return mapPage(rows[0]);
   } catch (err) {
     // Fallback if extended columns do not exist in current schema
-    if (err && (err.code === '42703' || /column\s+"?(hero_image|nav_group|nav_order|placement|placement_ref_id|editor_mode|raw_html|raw_css|raw_js)"?\s+does not exist/i.test(String(err.message)))) {
-      const noExtendedEntries = entries.filter(([k]) => !['hero_image', 'nav_group', 'nav_order', 'placement', 'placement_ref_id', 'editor_mode', 'raw_html', 'raw_css', 'raw_js'].includes(k));
+    if (err && (err.code === '42703' || /column\s+"?(hero_image|nav_group|nav_order|placement|placement_ref_id|editor_mode|raw_html|raw_css|raw_js|bulk_images)"?\s+does not exist/i.test(String(err.message)))) {
+      const noExtendedEntries = entries.filter(([k]) => !['hero_image', 'nav_group', 'nav_order', 'placement', 'placement_ref_id', 'editor_mode', 'raw_html', 'raw_css', 'raw_js', 'bulk_images'].includes(k));
       if (!noExtendedEntries.length) return getPageById(page_id);
       const sets2 = [];
       const params2 = [];
