@@ -3,7 +3,7 @@ const { Pool } = require('pg');
 
 // Use the correct database configuration from DATABASE_URL
 const pool = new Pool({
-  connectionString: 'postgresql://root:dx7EmsRrAs61b8RG2h1o9XJXIA1XNnD6@dpg-d4kmfc24d50c73djp580-a.singapore-postgres.render.com/snow_nixg',
+  connectionString: 'postgresql://root:E5zkE4XyQBaT0LUXFF1rQCVVGybFHMH2@dpg-d591fkruibrs73b0tps0-a.singapore-postgres.render.com/snowcity_553z',
   ssl: { rejectUnauthorized: false },
   application_name: 'snowcity-admin-setup'
 });
