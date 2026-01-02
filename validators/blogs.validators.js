@@ -1,10 +1,18 @@
 const { body, param, query } = require('express-validator');
 
+const relativeOrAbsoluteUrl = (value) => {
+  if (!value) return true;
+  const str = String(value);
+  if (/^https?:\/\//i.test(str)) return true;
+  if (str.startsWith('/')) return true;
+  throw new Error('image_url must be absolute (https://) or a /relative/path');
+};
+
 const createBlogValidator = [
   body('title').isLength({ min: 2, max: 150 }),
   body('slug').isLength({ min: 2, max: 100 }).matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   body('content').optional({ nullable: true }).isString(),
-  body('image_url').optional({ nullable: true }).isURL(),
+  body('image_url').optional({ nullable: true }).custom(relativeOrAbsoluteUrl),
   body('author').optional({ nullable: true }).isLength({ min: 2, max: 100 }),
   body('active').optional().isBoolean().toBoolean(),
 ];

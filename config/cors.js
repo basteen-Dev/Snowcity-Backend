@@ -1,7 +1,7 @@
 const DEFAULT_ORIGINS = [
   'https://snowcity-backend-zjlj.onrender.com',
-  'https:snowpark.netlify.app',
-  'https:snowpark.netlify.app',
+  'http://localhost:5173',
+  'http://localhost:5173',
   'http://127.0.0.1:5173',
   'http://127.0.0.1:5174',
   'https://snowcity-backend-zjlj.onrender.com',
